@@ -1,4 +1,4 @@
-A rough prototype of a web framework for [Jim Tcl](http://jim.tcl.tk/).
+A prototype of a web framework for [Jim Tcl](http://jim.tcl.tk/).
 
 # Use example
 ```Tcl

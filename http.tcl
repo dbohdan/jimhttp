@@ -17,8 +17,7 @@ set http::statusCodePhrases [dict create {*}{
 proc http::make-response {{code 200} content} {
     global http::statusCodePhrases
 
-    set httpResponseTemplate {
-HTTP/1.1 %d %s
+    set httpResponseTemplate {HTTP/1.1 %d %s
 Content-Type: text/html
 Content-Length: %d
 
