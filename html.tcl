@@ -1,5 +1,5 @@
 # An HTML templating DSL for Jim Tcl.
-# Copyright (C) 2014 Danyil Bohdan, https://github.com/dbohdan/
+# Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
 proc html::escape text {
@@ -8,25 +8,28 @@ proc html::escape text {
 }
 
 proc html::tag {tag args} {
-    set params {}
+    # If there's only argument given treat it as tag content. If there is more
+    # than one argument treat the first one as a tag attribute dict and the
+    # rest as content.
+    set attribs {}
     if {[llength $args] > 1} {
-        set params [lindex $args 0]
+        set attribs [lindex $args 0]
         set args [lrange $args 1 end]
     }
 
-    set paramText {}
-    foreach {name value} $params {
-        append paramText " $name=\"$value\""
+    set attribText {}
+    foreach {name value} $attribs {
+        append attribText " $name=\"$value\""
     }
-    return "<$tag$paramText>[join $args ""]</$tag>"
+    return "<$tag$attribText>[join $args ""]</$tag>"
 }
 
-proc html::tag-single {tag {params {}}} {
-    set paramText {}
-    foreach {name value} $params {
-        append paramText " $name=\"$value\""
+proc html::tag-no-content {tag {attribs {}}} {
+    set attribText {}
+    foreach {name value} $attribs {
+        append attribText " $name=\"$value\""
     }
-    return "<$tag$paramText>"
+    return "<$tag$attribText>"
 }
 
 # Zip together (transpose) lists.
@@ -49,26 +52,31 @@ proc html::zip args {
     return $result
 }
 
-# Don't use static variables for Tcl compatibility.
-foreach tag {html body table td tr a div pre form textarea h1} {
+# Here we actually create the tags. Proc static variables are not use for the
+# sake of Tcl compatibility.
+set tags {html body table td tr a div pre form textarea h1}
+set tagsWithoutContent {input submit br hr}
+
+foreach tag $tags {
     proc $tag args [
         format {html::tag %s {*}$args} $tag
     ]
 }
-foreach tag {input submit br hr} {
+foreach tag $tagsWithoutContent {
     proc $tag args [
-        format {html::tag-single %s {*}$args} $tag
+        format {html::tag-no-content %s {*}$args} $tag
     ]
 }
 
-proc html::table-row args {
-    tr "" {*}[lmap cell $args { td "" $cell }]
+proc html::make-table-row args {
+    tr "" {*}[lmap cell $args { td $cell }]
 }
 
-proc html::table args {
+# Return an HTML table. Each argument is converted to a table row.
+proc html::make-table args {
     table {} {*}[
         lmap row [html::zip {*}$args] {
-            html::table-row {*}$row
+            html::make-table-row {*}$row
         }
     ]
 }

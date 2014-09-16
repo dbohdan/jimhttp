@@ -1,6 +1,6 @@
 #!/usr/bin/env jimsh
 # A minimal HTTP server framework for Jim Tcl.
-# Copyright (C) 2014 Danyil Bohdan, https://github.com/dbohdan/
+# Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 set http::DEBUG 1
 
@@ -38,10 +38,17 @@ proc handler::greet {request routeVars} {
     return [list 200 "Hello, [dict get $routeVars name] from [dict get $routeVars town]!"]
 }
 
-set routes [dict create {*}{
+proc handler::table-test {request routeVars} {
+    return [list 200 \
+        [html::make-table {1 2} {3 4}]
+    ]
+}
+
+set http::routes [dict create {*}{
     / handler::homepage
     /quit handler::bye
     /form handler::process-form
     /hello/:name/:town handler::greet
+    /table handler::table-test
 }]
-http::start-server 127.0.0.1 8080 http::serve $routes
+http::start-server 127.0.0.1 8080

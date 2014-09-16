@@ -1,5 +1,5 @@
 # A minimal HTTP server framework for Jim Tcl.
-# Copyright (C) 2014 Danyil Bohdan, https://github.com/dbohdan/
+# Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
 proc http::make-response {{code 200} content} {
@@ -29,18 +29,18 @@ proc http::uri-decode str {
     return [subst -novar -nocommand $str]
 }
 
-# Decode a POST/GET response.
+# Decode a POST/GET form.
 # string -> dict
-proc http::response-decode {postData} {
+proc http::form-decode {formData} {
     set result {}
-    foreach x [split $postData &] {
+    foreach x [split $formData &] {
         lassign [lmap y [split $x =] { uri-decode $y }] key value
         dict set result $key $value
     }
     return $result
 }
 
-# Handle HTTP requests over a channel.
+# Handle HTTP requests over a channel and send responses.
 proc http::serve {channel clientaddr clientport routes} {
     global http::DEBUG
 
@@ -67,7 +67,7 @@ proc http::serve {channel clientaddr clientport routes} {
             set method [lindex $bufArr 0]
             set url [lindex $bufArr 1]
 
-            set getData [response-decode \
+            set getData [form-decode \
                     [lindex [split [lindex $bufArr 1] ?] 1]]
             if {$getData ne ""} {
                 set get 1
@@ -95,7 +95,7 @@ proc http::serve {channel clientaddr clientport routes} {
         set postString [read $channel $postContentLength]
         if {$http::DEBUG} {
             puts "POST request: $postString"
-            puts [set postData [response-decode $postString]]
+            puts [set postData [form-decode $postString]]
         }
     }
 
@@ -115,19 +115,19 @@ proc http::serve {channel clientaddr clientport routes} {
     close $channel
 }
 
-proc http::start-server {ipAddress port serveProcName {argument ""}} {
+proc http::start-server {ipAddress port} {
     global http::serverSocket
     global http::done
 
     set http::serverSocket [socket stream.server $ipAddress:$port]
-    $http::serverSocket readable [format {
+    $http::serverSocket readable {
         set client [$http::serverSocket accept addr]
-        %s $client {*}[split $addr :] [list %s]
-    } $serveProcName $argument]
+        http::serve $client {*}[split $addr :] $http::routes
+    }
     vwait http::done
 }
 
-# Call route handler for the request url if available and retuns its result.
+# Call route handler for the request url if available and returns its result.
 # Otherwise return 404 error message.
 proc http::route {request routes} {
     global http::DEBUG
@@ -171,6 +171,8 @@ proc http::get-route-variables {route url} {
 
 # Return the first route out of list routeList that matches url.
 proc http::match-route {routeList url} {
+    puts $routeList
+
     foreach route $routeList {
         set routeVars [http::get-route-variables $route $url]
         if {$routeVars != 0} {
