@@ -181,3 +181,16 @@ proc http::match-route {routeList url} {
     }
     return 0
 }
+
+proc http::add-handler {route script} {
+    global http::handlersNumber
+    global http::routes
+
+    incr http::handlersNumber
+    set procName "handler::$http::handlersNumber"
+
+    proc $procName {request routeVars} $script
+    dict set http::routes $route $procName
+
+    puts $procName
+}

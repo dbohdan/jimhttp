@@ -3,7 +3,7 @@
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
-source server.tcl
+source http.tcl
 
 proc assert expression {
     if {![expr $expression]} {
