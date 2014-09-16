@@ -1,4 +1,3 @@
-#!/usr/bin/env jimsh
 # A minimal HTTP server framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan, https://github.com/dbohdan/
 # License: MIT
@@ -41,12 +40,15 @@ proc http::response-decode {postData} {
     return $result
 }
 
-# Handle HTTP requests.
+# Handle HTTP requests over a channel.
 proc http::serve {channel clientaddr clientport routes} {
     global http::DEBUG
 
-    puts "Client connected: $clientaddr"
+    if {$http::DEBUG} {
+        puts "Client connected: $clientaddr"
+    }
 
+    set method {}
     set url {}
     set get 0
     set getData {}
@@ -62,14 +64,15 @@ proc http::serve {channel clientaddr clientport routes} {
         # make this a switch statement
         if {$url eq ""} {
             set bufArr [split $buf]
+            set method [lindex $bufArr 0]
             set url [lindex $bufArr 1]
-            if {[lindex $bufArr 0] eq "GET"} {
-                set getData [response-decode \
-                        [lindex [split [lindex $bufArr 1] ?] 1]]
-                if {$getData ne ""} {
-                    set get 1
-                }
+
+            set getData [response-decode \
+                    [lindex [split [lindex $bufArr 1] ?] 1]]
+            if {$getData ne ""} {
+                set get 1
             }
+
             if {$http::DEBUG} {
                 puts "GET request: [list $getData]"
             }
@@ -96,7 +99,13 @@ proc http::serve {channel clientaddr clientport routes} {
         }
     }
 
-    set request [dict create url $url host 0.0.0.0 form $getData formPost $postData remoteAddress $clientaddr]
+    set request [dict create \
+            method $method \
+            url $url \
+            host 0.0.0.0 \
+            form $getData \
+            formPost $postData \
+            remoteAddress $clientaddr]
 
     puts "Responding."
     puts -nonewline $channel [
@@ -118,7 +127,8 @@ proc http::start-server {ipAddress port serveProcName {argument ""}} {
     vwait http::done
 }
 
-# Call route handler for the request url.
+# Call route handler for the request url if available and retuns its result.
+# Otherwise return 404 error message.
 proc http::route {request routes} {
     global http::DEBUG
 

@@ -1,13 +1,19 @@
-#!/usr/bin/env jimsh
 # An HTML templating DSL for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan, https://github.com/dbohdan/
 # License: MIT
+
 proc html::escape text {
     # A relatively slow hack.
     exec recode utf8..html << $text
 }
 
-proc html::tag {tag params args} {
+proc html::tag {tag args} {
+    set params {}
+    if {[llength $args] > 1} {
+        set params [lindex $args 0]
+        set args [lrange $args 1 end]
+    }
+
     set paramText {}
     foreach {name value} $params {
         append paramText " $name=\"$value\""
