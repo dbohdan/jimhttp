@@ -3,8 +3,6 @@
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
-source http.tcl
-
 proc assert expression {
     if {![expr $expression]} {
         error "Not true: $expression"
@@ -17,6 +15,9 @@ proc assert-all-equal args {
         assert [list \"$arg\" eq \"$prevArg\"]
     }
 }
+
+# http tests
+source http.tcl
 
 assert-all-equal \
         [http::get-route-variables \
@@ -32,3 +33,10 @@ assert-all-equal \
         [http::get-route-variables \
                 {/bye/:name/:town} {/hello/john/smallville/}] \
         0
+
+# html tests
+source html.tcl
+
+foreach t {{!@#$%^&*()_+} {<b>Hello!</b>}} {
+    assert-all-equal [html::unescape [html::escape $t]] $t
+}

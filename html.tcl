@@ -2,9 +2,19 @@
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
+# HTML entities processing code based on http://wiki.tcl.tk/26403.
+source entities.tcl
+
+set html::entitiesInverse [lreverse $html::entities]
+
 proc html::escape text {
-    # A relatively slow hack.
-    exec recode utf8..html << $text
+    global html::entities
+    string map $html::entities $text
+}
+
+proc html::unescape text {
+    global html::entitiesInverse
+    string map $html::entitiesInverse $text
 }
 
 proc html::tag {tag args} {
