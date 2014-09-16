@@ -2,14 +2,13 @@
 # A minimal HTTP server framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
-set http::DEBUG 1
-
 source http.tcl
 source html.tcl
 
+set http::DEBUG 1
+
 http::add-handler / {
     return [list \
-        200 \
         [html "" \
             [form {action /form method POST} \
                 [h1 "Hello"] [br] \
@@ -22,7 +21,7 @@ http::add-handler / {
 }
 
 http::add-handler /form {
-    return [list 200 [format \
+    return [list [format \
         {You (%s) said:<br>%s} \
         [html::escape [dict get $request formPost name]] \
         [html::escape [dict get $request formPost message]]]]
@@ -35,11 +34,11 @@ http::add-handler /quit {
 }
 
 http::add-handler /hello/:name/:town {
-    return [list 200 "Hello, [dict get $routeVars name] from [dict get $routeVars town]!"]
+    return [list "Hello, [dict get $routeVars name] from [dict get $routeVars town]!"]
 }
 
 http::add-handler /table {
-    return [list 200 \
+    return [list \
         [html::make-table {1 2} {3 4}]
     ]
 }

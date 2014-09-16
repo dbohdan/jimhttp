@@ -34,11 +34,11 @@ Content-Length: %d
     return $output
 }
 
-proc http::debug-message args {
+proc http::debug-message message {
     global http::DEBUG
 
     if {$http::DEBUG} {
-        puts {*}$args
+        puts $message
     }
 }
 
@@ -93,7 +93,7 @@ proc http::serve {channel clientaddr clientport routes} {
                 set get 1
             }
 
-            http::debug-message puts "GET request: [list $getData]"
+            http::debug-message "GET request: [list $getData]"
         }
         if {!$post} {
             set postContentLength [scan $buf "Content-Length: %d"]
@@ -125,7 +125,8 @@ proc http::serve {channel clientaddr clientport routes} {
 
     http::debug-message "Responding."
     puts -nonewline $channel [
-        http::make-response {*}[route $request $routes]
+        lassign [route $request $routes] text metadata
+        http::make-response $text
     ]
 
     close $channel
@@ -156,7 +157,7 @@ proc http::route {request routes} {
         set result [$procName $request [lindex $matchResult 1]]
         return $result
     } else {
-        return {404 "<h1>Not found.</h1>"}
+        return {"<h1>Not found.</h1>" {code 404}}
     }
 }
 
