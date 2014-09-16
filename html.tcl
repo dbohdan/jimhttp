@@ -1,14 +1,13 @@
 #!/usr/bin/env jimsh
-# HTML templating DSL for Jim Tcl.
+# An HTML templating DSL for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan, https://github.com/dbohdan/
 # License: MIT
-proc html-escape text {
+proc html::escape text {
     # A relatively slow hack.
-    #exec recode utf8..html << $text
-    error "NOT IMPLTED"
+    exec recode utf8..html << $text
 }
 
-proc html-tag {tag params args} {
+proc html::tag {tag params args} {
     set paramText {}
     foreach {name value} $params {
         append paramText " $name=\"$value\""
@@ -16,7 +15,7 @@ proc html-tag {tag params args} {
     return "<$tag$paramText>[join $args ""]</$tag>"
 }
 
-proc html-tag-single {tag {params {}}} {
+proc html::tag-single {tag {params {}}} {
     set paramText {}
     foreach {name value} $params {
         append paramText " $name=\"$value\""
@@ -25,7 +24,7 @@ proc html-tag-single {tag {params {}}} {
 }
 
 # Zip together (transpose) lists.
-proc zip args {
+proc html::zip args {
     set columns $args
     set nColumns [llength $columns]
     set loopArgument {}
@@ -45,25 +44,25 @@ proc zip args {
 }
 
 # Don't use static variables for Tcl compatibility.
-foreach tag {html body table td tr a div form textarea h1} {
+foreach tag {html body table td tr a div pre form textarea h1} {
     proc $tag args [
-        format {html-tag %s {*}$args} $tag
+        format {html::tag %s {*}$args} $tag
     ]
 }
-foreach tag {input submit} {
+foreach tag {input submit br hr} {
     proc $tag args [
-        format {html-tag-single %s {*}$args} $tag
+        format {html::tag-single %s {*}$args} $tag
     ]
 }
 
-proc html-table-row args {
+proc html::table-row args {
     tr "" {*}[lmap cell $args { td "" $cell }]
 }
 
-proc html-table args {
+proc html::table args {
     table {} {*}[
-        lmap row [zip {*}$args] {
-            html-table-row {*}$row
+        lmap row [html::zip {*}$args] {
+            html::table-row {*}$row
         }
     ]
 }

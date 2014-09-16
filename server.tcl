@@ -3,22 +3,22 @@
 # Copyright (C) 2014 Danyil Bohdan, https://github.com/dbohdan/
 # License: MIT
 
-proc make-http-response content {
+proc http::make-response {{code 200} content} {
     set httpResponseTemplate {
-HTTP/1.1 200 OK
+HTTP/1.1 %d OK
 Content-Type: text/html
 Content-Length: %d
 
 %s
 }
-    set length [string length [string map {\n \r\n} $content]]
-    set output [format $httpResponseTemplate $length $content]
+    set length [+ 1 [string length [string map {\n \r\n} $content]]]
+    set output [format $httpResponseTemplate $code $length $content]
 
     return $output
 }
 
 # From http://wiki.tcl.tk/14144.
-proc uri-decode str {
+proc http::uri-decode str {
     # rewrite "+" back to space
     # protect \ from quoting another '\'
     set str [string map [list + { } "\\" "\\\\"] $str]
@@ -32,14 +32,18 @@ proc uri-decode str {
 
 # Decode a POST/GET response.
 # string -> dict
-proc response-decode {postData} {
-    lmap x [split $postData &] {
-        lmap y [split $x =] { uri-decode $y }
+proc http::response-decode {postData} {
+    set result {}
+    foreach x [split $postData &] {
+        lassign [lmap y [split $x =] { uri-decode $y }] key value
+        dict set result $key $value
     }
+    return $result
 }
 
-proc serve {channel clientaddr clientport routes} {
-    global DEBUG
+# Handle HTTP requests.
+proc http::serve {channel clientaddr clientport routes} {
+    global http::DEBUG
 
     puts "Client connected: $clientaddr"
 
@@ -52,7 +56,7 @@ proc serve {channel clientaddr clientport routes} {
 
     while {[gets $channel buf]} {
         set buf [string trimright $buf \r]
-        if {$DEBUG} {
+        if {$http::DEBUG} {
             puts [list $buf]
         }
         # make this a switch statement
@@ -66,7 +70,7 @@ proc serve {channel clientaddr clientport routes} {
                     set get 1
                 }
             }
-            if {$DEBUG} {
+            if {$http::DEBUG} {
                 puts "GET request: [list $getData]"
             }
         }
@@ -86,7 +90,7 @@ proc serve {channel clientaddr clientport routes} {
     # Process POST data.
     if {$post} {
         set postString [read $channel $postContentLength]
-        if {$DEBUG} {
+        if {$http::DEBUG} {
             puts "POST request: $postString"
             puts [set postData [response-decode $postString]]
         }
@@ -96,29 +100,72 @@ proc serve {channel clientaddr clientport routes} {
 
     puts "Responding."
     puts -nonewline $channel [
-        make-http-response [route $request $routes]
+        http::make-response {*}[route $request $routes]
     ]
 
     close $channel
 }
 
-proc start-server {ipAddress port serveProcName {argument ""}} {
-    global httpServerSocket
-    global httpServerDone
+proc http::start-server {ipAddress port serveProcName {argument ""}} {
+    global http::serverSocket
+    global http::done
 
-    set httpServerSocket [socket stream.server $ipAddress:$port]
-    $httpServerSocket readable [format {
-        set client [$httpServerSocket accept addr]
+    set http::serverSocket [socket stream.server $ipAddress:$port]
+    $http::serverSocket readable [format {
+        set client [$http::serverSocket accept addr]
         %s $client {*}[split $addr :] [list %s]
     } $serveProcName $argument]
-    vwait httpServerDone
+    vwait http::done
 }
 
-proc route {request routes} {
-    global DEBUG
+# Call route handler for the request url.
+proc http::route {request routes} {
+    global http::DEBUG
 
-    if {$DEBUG} {
-        puts $request
+    if {$http::DEBUG} {
+        puts "request: $request"
     }
-    switch -exact -- [dict get $request url] $routes
+
+    set url [dict get $request url]
+
+    set matchResult [http::match-route [dict keys $routes] $url]
+    if {$matchResult != 0} {
+        puts -$matchResult-[lindex $matchResult 0]
+        set procName [dict get $routes [lindex $matchResult 0]]
+        set result [$procName $request [lindex $matchResult 1]]
+        return $result
+    } else {
+        return {404 "<h1>Not found.</h1>"}
+    }
+}
+
+# Return route variables contained in url if it can be parsed as a route $route.
+# Return 0 otherwise.
+proc http::get-route-variables {route url} {
+    # set route [string trimright $route /]
+    # set url [string trimright $url /]
+
+    set routeVars {}
+    foreach routeSegment [split $route /] urlSegment [split $url /] {
+        if {[string index $routeSegment 0] eq ":"} {
+            dict set routeVars [string range $routeSegment 1 end] $urlSegment
+        } else {
+            # Static parts of the URL and route should be equal
+            if {$urlSegment ne $routeSegment} {
+                return 0
+            }
+        }
+    }
+    return $routeVars
+}
+
+# Return the first route out of list routeList that matches url.
+proc http::match-route {routeList url} {
+    foreach route $routeList {
+        set routeVars [http::get-route-variables $route $url]
+        if {$routeVars != 0} {
+            return [list $route $routeVars]
+        }
+    }
+    return 0
 }
