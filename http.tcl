@@ -1,19 +1,46 @@
 # A minimal HTTP server framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
+set http::DEBUG 0
+
+set http::statusCodePhrases [dict create {*}{
+    200 OK
+    201 {Created}
+    301 {Moved Permanently}
+    400 {Bad Request}
+    401 {Unauthorized}
+    403 {Forbidden}
+    404 {Not Found}
+    405 {Method Not Allowed}
+}]
 
 proc http::make-response {{code 200} content} {
+    global http::statusCodePhrases
+
     set httpResponseTemplate {
-HTTP/1.1 %d OK
+HTTP/1.1 %d %s
 Content-Type: text/html
 Content-Length: %d
 
 %s
 }
     set length [+ 1 [string length [string map {\n \r\n} $content]]]
-    set output [format $httpResponseTemplate $code $length $content]
+    set output [format \
+            $httpResponseTemplate \
+            $code \
+            [dict get $http::statusCodePhrases $code] \
+            $length \
+            $content]
 
     return $output
+}
+
+proc http::debug-message args {
+    global http::DEBUG
+
+    if {$http::DEBUG} {
+        puts {*}$args
+    }
 }
 
 # From http://wiki.tcl.tk/14144.
@@ -42,11 +69,7 @@ proc http::form-decode {formData} {
 
 # Handle HTTP requests over a channel and send responses.
 proc http::serve {channel clientaddr clientport routes} {
-    global http::DEBUG
-
-    if {$http::DEBUG} {
-        puts "Client connected: $clientaddr"
-    }
+    http::debug-message "Client connected: $clientaddr"
 
     set method {}
     set url {}
@@ -58,9 +81,7 @@ proc http::serve {channel clientaddr clientport routes} {
 
     while {[gets $channel buf]} {
         set buf [string trimright $buf \r]
-        if {$http::DEBUG} {
-            puts [list $buf]
-        }
+        http::debug-message [list $buf]
         # make this a switch statement
         if {$url eq ""} {
             set bufArr [split $buf]
@@ -73,9 +94,7 @@ proc http::serve {channel clientaddr clientport routes} {
                 set get 1
             }
 
-            if {$http::DEBUG} {
-                puts "GET request: [list $getData]"
-            }
+            http::debug-message puts "GET request: [list $getData]"
         }
         if {!$post} {
             set postContentLength [scan $buf "Content-Length: %d"]
@@ -93,10 +112,8 @@ proc http::serve {channel clientaddr clientport routes} {
     # Process POST data.
     if {$post} {
         set postString [read $channel $postContentLength]
-        if {$http::DEBUG} {
-            puts "POST request: $postString"
-            puts [set postData [form-decode $postString]]
-        }
+        http::debug-message "POST request: $postString"
+        set postData [form-decode $postString]
     }
 
     set request [dict create \
@@ -107,7 +124,7 @@ proc http::serve {channel clientaddr clientport routes} {
             formPost $postData \
             remoteAddress $clientaddr]
 
-    puts "Responding."
+    http::debug-message "Responding."
     puts -nonewline $channel [
         http::make-response {*}[route $request $routes]
     ]
@@ -130,17 +147,12 @@ proc http::start-server {ipAddress port} {
 # Call route handler for the request url if available and returns its result.
 # Otherwise return 404 error message.
 proc http::route {request routes} {
-    global http::DEBUG
-
-    if {$http::DEBUG} {
-        puts "request: $request"
-    }
+    http::debug-message "request: $request"
 
     set url [dict get $request url]
 
     set matchResult [http::match-route [dict keys $routes] $url]
     if {$matchResult != 0} {
-        puts -$matchResult-[lindex $matchResult 0]
         set procName [dict get $routes [lindex $matchResult 0]]
         set result [$procName $request [lindex $matchResult 1]]
         return $result
@@ -171,8 +183,6 @@ proc http::get-route-variables {route url} {
 
 # Return the first route out of list routeList that matches url.
 proc http::match-route {routeList url} {
-    puts $routeList
-
     foreach route $routeList {
         set routeVars [http::get-route-variables $route $url]
         if {$routeVars != 0} {
@@ -191,6 +201,4 @@ proc http::add-handler {route script} {
 
     proc $procName {request routeVars} $script
     dict set http::routes $route $procName
-
-    puts $procName
 }
