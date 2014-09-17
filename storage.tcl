@@ -3,8 +3,7 @@
 # License: MIT
 
 set storage::db {}
-set storage::persistedProcNames {}
-set storage::varsToPersist {storage::persistedProcNames}
+set storage::varsToPersist {}
 
 proc storage::init {{filename ""}} {
     global storage::db

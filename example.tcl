@@ -73,7 +73,6 @@ http::add-handler /counter-persistent {{pcounter 0}} {
     incr pcounter
 
     storage::persist-statics
-    #after idle [list storage::persist-statics [storage::caller-full-name]]
     return [list $pcounter]
 }
 

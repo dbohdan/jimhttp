@@ -196,12 +196,9 @@ proc http::match-route {routeList url} {
 }
 
 proc http::add-handler {route {statics {}} script} {
-    global http::handlersNumber
     global http::routes
 
-    incr http::handlersNumber
-    set procName "handler::$http::handlersNumber"
-
+    set procName "handler::$route"
     proc $procName {request routeVars} $statics $script
     dict set http::routes $route $procName
 }
