@@ -1,5 +1,5 @@
 #!/usr/bin/env jimsh
-# A minimal HTTP server framework for Jim Tcl.
+# An HTTP server and web framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 source http.tcl
@@ -7,40 +7,84 @@ source html.tcl
 
 set http::DEBUG 1
 
+# This file showcases the various features of the framework and the different
+# styles in which it can be used.
+
+# An example of the HTML DSL from html.tcl. It also provides links to
+# other examples.
 http::add-handler / {
     return [list \
-        [html "" \
-            [form {action /form method POST} \
-                [h1 "Hello"] [br] \
-                [input {name name type text value Anonymous}] [br] \
-                [textarea {name message} "Your message here."] [br]\
-                [input {type submit}]
-            ]
-        ]
-    ]
+            [html "" \n \
+                [form {action /form method POST} \n \
+                    [h1 "Hello"] [br] \n \
+                    [input {name name type text value Anonymous}] [br] \n \
+                    [textarea {name message} "Your message here."] [br] \n \
+                    [input {type submit}]] [br] \n \
+                [ul "" \
+                    [li [a {href "/ajax"} /ajax]] \n \
+                    [li [a {href "/counter"} /counter]] \n \
+                    [li [a {href "/hello/John/Smallville"} \
+                            /hello/John/Smallville]] \n \
+                    [li [a {href "/table"} /table]] \n \
+                    [li [a {href "/quit"} /quit]]]]]
 }
 
+# Process POST form data for the form at /.
 http::add-handler /form {
-    return [list [format \
-        {You (%s) said:<br>%s} \
-        [html::escape [dict get $request formPost name]] \
-        [html::escape [dict get $request formPost message]]]]
+    return [list \
+            [format \
+                {You (%s) said:<br>%s} \
+                [html::escape [dict get $request formPost name]] \
+                [html::escape [dict get $request formPost message]]]]
 }
 
+# Shut down the HTTP server.
 http::add-handler /quit {
     global http::done
     set http::done 1
-    return "Bye!"
+    return [list "Bye!"]
 }
 
+# Process route variables. Their values are available to the handler script
+# through the dict routeVars.
 http::add-handler /hello/:name/:town {
-    return [list "Hello, [dict get $routeVars name] from [dict get $routeVars town]!"]
+    return [list "Hello, $routeVars(name) from $routeVars(town)!"]
 }
 
+# Table generation using html.tcl.
 http::add-handler /table {
-    return [list \
-        [html::make-table {1 2} {3 4}]
-    ]
+    return [list [html::make-table {1 2} {3 4}]]
+}
+
+# Handler static variables.
+http::add-handler /counter {{counter 0}} {
+    incr counter
+
+    return [list $counter]
+}
+
+# AJAX requests.
+http::add-handler /ajax {
+    return [list {
+        <!DOCTYPE html>
+        <html>
+        <body>
+            <script>
+                var updateCounter = function() {
+                    var xmlhttp = new XMLHttpRequest();
+                    xmlhttp.open("GET", "/counter", false);
+                    xmlhttp.send();
+                    document.querySelectorAll("#counter")[0].innerHTML =
+                            "Counter value: " + xmlhttp.responseText;
+                }
+            </script>
+            <div style="width: 100%; margin-bottom: 10px;">
+                <span id="counter">Click the button.</span>
+            </div>
+            <button onclick="javascript:updateCounter();">Update</button>
+        </body>
+        </html>
+    }]
 }
 
 http::start-server 127.0.0.1 8080

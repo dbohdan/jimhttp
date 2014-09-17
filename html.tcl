@@ -58,13 +58,12 @@ proc html::zip args {
     foreach {*}$loopArgument {
         lappend result [lmap var $variables { set $var }]
     }
-    puts $result
     return $result
 }
 
 # Here we actually create the tags. Proc static variables are not use for the
 # sake of Tcl compatibility.
-set tags {html body table td tr a div pre form textarea h1}
+set tags {body table td tr ul li a div pre form textarea h1}
 set tagsWithoutContent {input submit br hr}
 
 foreach tag $tags {
@@ -76,6 +75,11 @@ foreach tag $tagsWithoutContent {
     proc $tag args [
         format {html::tag-no-content %s {*}$args} $tag
     ]
+}
+proc html args {
+    set result "<!DOCTYPE html>"
+    append result [html::tag html {*}$args]
+    return $result
 }
 
 proc html::make-table-row args {

@@ -1,4 +1,4 @@
-# A minimal HTTP server framework for Jim Tcl.
+# An HTTP server and web framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 set http::DEBUG 0
@@ -14,24 +14,28 @@ set http::statusCodePhrases [dict create {*}{
     405 {Method Not Allowed}
 }]
 
-proc http::make-response {{code 200} content} {
+proc http::make-response {body {headers {}}} {
     global http::statusCodePhrases
 
-    set httpResponseTemplate {HTTP/1.1 %d %s
-Content-Type: text/html
-Content-Length: %d
+    set http::responseTemplate \
+{HTTP/1.1 $headers(code) $http::statusCodePhrases($headers(code))
+Content-Type: $headers(contentType)
+Content-Length: $length
 
-%s
+$body
 }
-    set length [+ 1 [string length [string map {\n \r\n} $content]]]
-    set output [format \
-            $httpResponseTemplate \
-            $code \
-            [dict get $http::statusCodePhrases $code] \
-            $length \
-            $content]
 
-    return $output
+    set http::headerDefaults [dict create {*}{
+        code 200
+        contentType text/html
+    }]
+
+    set headers [dict merge $http::headerDefaults $headers]
+    set length [+ 1 [string length [string map {\n \r\n} $body]]]
+
+    set response [subst $http::responseTemplate]
+
+    return $response
 }
 
 proc http::debug-message message {
@@ -125,8 +129,8 @@ proc http::serve {channel clientaddr clientport routes} {
 
     http::debug-message "Responding."
     puts -nonewline $channel [
-        lassign [route $request $routes] text metadata
-        http::make-response $text
+        lassign [route $request $routes] body headers
+        http::make-response $body $headers
     ]
 
     close $channel
@@ -192,13 +196,13 @@ proc http::match-route {routeList url} {
     return 0
 }
 
-proc http::add-handler {route script} {
+proc http::add-handler {route {statics {}} script} {
     global http::handlersNumber
     global http::routes
 
     incr http::handlersNumber
     set procName "handler::$http::handlersNumber"
 
-    proc $procName {request routeVars} $script
+    proc $procName {request routeVars} $statics $script
     dict set http::routes $route $procName
 }
