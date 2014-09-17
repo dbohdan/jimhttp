@@ -22,8 +22,7 @@ proc http::make-response {body {headers {}}} {
 Content-Type: $headers(contentType)
 Content-Length: $length
 
-$body
-}
+$body}
 
     set http::headerDefaults [dict create {*}{
         code 200
@@ -31,7 +30,7 @@ $body
     }]
 
     set headers [dict merge $http::headerDefaults $headers]
-    set length [+ 1 [string length [string map {\n \r\n} $body]]]
+    set length [string length [string map {\n \r\n} $body]]
 
     set response [subst $http::responseTemplate]
 
