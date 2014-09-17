@@ -87,7 +87,7 @@ http::add-handler /ajax {
                     var xmlhttp = new XMLHttpRequest();
                     xmlhttp.open("GET", "/counter", false);
                     xmlhttp.send();
-                    document.querySelectorAll("#counter")[0].innerHTML =
+                    document.querySelector("#counter").innerHTML =
                             "Counter value: " + xmlhttp.responseText;
                 }
             </script>

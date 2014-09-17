@@ -14,6 +14,7 @@ set http::statusCodePhrases [dict create {*}{
     405 {Method Not Allowed}
 }]
 
+# Return the text of an HTTP response with body $body.
 proc http::make-response {body {headers {}}} {
     global http::statusCodePhrases
 
@@ -37,6 +38,7 @@ $body}
     return $response
 }
 
+# Write $message to stdout if $http::DEBUG is true.
 proc http::debug-message message {
     global http::DEBUG
 
@@ -135,6 +137,7 @@ proc http::serve {channel clientaddr clientport routes} {
     close $channel
 }
 
+# Start the HTTP server binding it to $ipAddress and $port.
 proc http::start-server {ipAddress port} {
     global http::serverSocket
     global http::done
@@ -147,8 +150,8 @@ proc http::start-server {ipAddress port} {
     vwait http::done
 }
 
-# Call route handler for the request url if available and returns its result.
-# Otherwise return 404 error message.
+# Call route handler for the request url if available and return its result.
+# Otherwise return a 404 error message.
 proc http::route {request routes} {
     http::debug-message "request: $request"
 
@@ -164,8 +167,8 @@ proc http::route {request routes} {
     }
 }
 
-# Return route variables contained in url if it can be parsed as a route $route.
-# Return 0 otherwise.
+# Return route variables contained in the url if it can be parsed as route
+# $route. Return 0 otherwise.
 proc http::get-route-variables {route url} {
     # set route [string trimright $route /]
     # set url [string trimright $url /]
@@ -184,7 +187,7 @@ proc http::get-route-variables {route url} {
     return $routeVars
 }
 
-# Return the first route out of list routeList that matches url.
+# Return the first route out of list $routeList that matches $url.
 proc http::match-route {routeList url} {
     foreach route $routeList {
         set routeVars [http::get-route-variables $route $url]
@@ -195,6 +198,7 @@ proc http::match-route {routeList url} {
     return 0
 }
 
+# Create a proc to handle the route $route with body $script.
 proc http::add-handler {route {statics {}} script} {
     global http::routes
 

@@ -7,6 +7,7 @@ source entities.tcl
 
 set html::entitiesInverse [lreverse $html::entities]
 
+# Escape HTML entities in $text.
 proc html::escape text {
     global html::entities
     string map $html::entities $text
@@ -17,6 +18,8 @@ proc html::unescape text {
     string map $html::entitiesInverse $text
 }
 
+# [html::tag tag {attr1 val1} content] returns <tag attr1=val1>content</tag>
+# [html::tag tag content] returns <tag>content</tag>
 proc html::tag {tag args} {
     # If there's only argument given treat it as tag content. If there is more
     # than one argument treat the first one as a tag attribute dict and the
@@ -34,6 +37,7 @@ proc html::tag {tag args} {
     return "<$tag$attribText>[join $args ""]</$tag>"
 }
 
+# [html::tag tag {attr1 val1}] returns <tag attr1=val1>
 proc html::tag-no-content {tag {attribs {}}} {
     set attribText {}
     foreach {name value} $attribs {
@@ -61,9 +65,9 @@ proc html::zip args {
     return $result
 }
 
-# Here we actually create the tags. Proc static variables are not use for the
-# sake of Tcl compatibility.
-set tags {body table td tr ul li a div pre form textarea h1}
+# Here we actually create the tag procs. Proc static variables are not use for
+# the sake of Tcl compatibility.
+set tags {head body table td tr ul li a div pre form textarea h1 h2 h3 h4 h5}
 set tagsWithoutContent {input submit br hr}
 
 foreach tag $tags {
@@ -76,6 +80,7 @@ foreach tag $tagsWithoutContent {
         format {html::tag-no-content %s {*}$args} $tag
     ]
 }
+# Create the html tag proc as a special case.
 proc html args {
     set result "<!DOCTYPE html>"
     append result [html::tag html {*}$args]
