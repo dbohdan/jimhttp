@@ -4,6 +4,7 @@
 # License: MIT
 source http.tcl
 source html.tcl
+source storage.tcl
 
 set http::DEBUG 1
 
@@ -23,6 +24,8 @@ http::add-handler / {
                 [ul "" \
                     [li [a {href "/ajax"} /ajax]] \n \
                     [li [a {href "/counter"} /counter]] \n \
+                    [li [a {href "/counter-persistent"} \
+                            /counter-persistent]] \n \
                     [li [a {href "/hello/John/Smallville"} \
                             /hello/John/Smallville]] \n \
                     [li [a {href "/table"} /table]] \n \
@@ -56,11 +59,22 @@ http::add-handler /table {
     return [list [html::make-table {1 2} {3 4}]]
 }
 
-# Handler static variables.
+# Static variables in a handler.
 http::add-handler /counter {{counter 0}} {
     incr counter
 
     return [list $counter]
+}
+
+# Persistent storage.
+http::add-handler /counter-persistent {{pcounter 0}} {
+    storage::restore-statics
+
+    incr pcounter
+
+    storage::persist-statics
+    #after idle [list storage::persist-statics [storage::caller-full-name]]
+    return [list $pcounter]
 }
 
 # AJAX requests.
@@ -87,4 +101,5 @@ http::add-handler /ajax {
     }]
 }
 
+storage::init
 http::start-server 127.0.0.1 8080

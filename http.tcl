@@ -1,4 +1,4 @@
-# An HTTP server and web framework for Jim Tcl.
+# A minimal HTTP server framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 set http::DEBUG 0
@@ -18,7 +18,7 @@ proc http::make-response {body {headers {}}} {
     global http::statusCodePhrases
 
     set http::responseTemplate \
-{HTTP/1.1 $headers(code) $http::statusCodePhrases($headers(code))
+        {HTTP/1.1 $headers(code) $http::statusCodePhrases($headers(code))
 Content-Type: $headers(contentType)
 Content-Length: $length
 
@@ -30,7 +30,7 @@ $body}
     }]
 
     set headers [dict merge $http::headerDefaults $headers]
-    set length [string length [string map {\n \r\n} $body]]
+    set length [string length $body]
 
     set response [subst $http::responseTemplate]
 
