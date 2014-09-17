@@ -40,3 +40,16 @@ source html.tcl
 foreach t {{!@#$%^&*()_+} {<b>Hello!</b>}} {
     assert-all-equal [html::unescape [html::escape $t]] $t
 }
+
+# example code and http tests
+set curlAvailable [expr {![catch {exec curl -V}]}]
+if {$curlAvailable} {
+    proc test-url args {
+        puts [exec curl -v {*}$args]\n
+    }
+    exec jimsh example.tcl 0 &
+    test-url http://localhost:8080/
+    test-url http://localhost:8080/does-not-exist
+    test-url http://localhost:8080/
+    test-url http://localhost:8080/quit
+}

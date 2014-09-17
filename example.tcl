@@ -6,7 +6,10 @@ source http.tcl
 source html.tcl
 source storage.tcl
 
-set http::DEBUG 1
+set http::DEBUG [lindex $argv 0]
+if {$http::DEBUG eq ""} {
+    set http::DEBUG 1
+}
 
 # This file showcases the various features of the framework and the different
 # styles in which it can be used.
