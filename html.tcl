@@ -46,6 +46,31 @@ proc html::tag-no-content {tag {attribs {}}} {
     return "<$tag$attribText>"
 }
 
+proc html::make-tags {tagList {withContent 1}} {
+    if {$withContent} {
+        set procName html::tag
+    } else {
+        set procName html::tag-no-content
+    }
+    foreach tag $tagList {
+        # Proc static variables are not use for the sake of Tcl compatibility.
+        uplevel 1 [list proc $tag args [
+            format {%s %s {*}$args} $procName $tag
+        ]]
+    }
+}
+
+# Here we actually create the tag procs.
+html::make-tags {head body table td tr ul li a div pre form textarea \
+        h1 h2 h3 h4 h5 b i u s tt} 1
+html::make-tags {input submit br hr} 0
+# Create the html tag proc as a special case.
+proc html args {
+    set result "<!DOCTYPE html>"
+    append result [html::tag html {*}$args]
+    return $result
+}
+
 # Zip together (transpose) lists.
 proc html::zip args {
     set columns $args
@@ -62,29 +87,6 @@ proc html::zip args {
     foreach {*}$loopArgument {
         lappend result [lmap var $variables { set $var }]
     }
-    return $result
-}
-
-# Here we actually create the tag procs. Proc static variables are not use for
-# the sake of Tcl compatibility.
-set tags {head body table td tr ul li a div pre form textarea h1 h2 h3 h4 h5
-        b i u s tt}
-set tagsWithoutContent {input submit br hr}
-
-foreach tag $tags {
-    proc $tag args [
-        format {html::tag %s {*}$args} $tag
-    ]
-}
-foreach tag $tagsWithoutContent {
-    proc $tag args [
-        format {html::tag-no-content %s {*}$args} $tag
-    ]
-}
-# Create the html tag proc as a special case.
-proc html args {
-    set result "<!DOCTYPE html>"
-    append result [html::tag html {*}$args]
     return $result
 }
 
