@@ -4,7 +4,7 @@
 
 set storage::db {}
 
-# Open the SQLite3 database in the file filename. Create the table if needed.
+# Open the SQLite3 database in the file $filename. Create the table if needed.
 proc storage::init {{filename ""}} {
     global storage::db
 
@@ -23,7 +23,7 @@ proc storage::init {{filename ""}} {
     }
 }
 
-# Store value under key.
+# Store $value under $key.
 proc storage::put {key value} {
     global storage::db
     $storage::db query {
@@ -31,7 +31,7 @@ proc storage::put {key value} {
     } $key $value
 }
 
-# Return value under key or "" if it doesn't exist.
+# Return the value under $key or "" if it doesn't exist.
 proc storage::get {key} {
     global storage::db
     # The return format of query is {{key value ...} ...}.
@@ -40,7 +40,7 @@ proc storage::get {key} {
     } $key] 0] 1
 }
 
-# Return 1 if a value exists under key or 0 otherwise.
+# Return 1 if a value exists under $key or 0 otherwise.
 proc storage::exists {key} {
     global storage::db
     # The return format of query is {{key value ...} ...}.
@@ -76,7 +76,8 @@ proc storage::caller-full-name {{level 1}} {
     return ${procNamespace}::${procName}
 }
 
-# Store the static variables of procName or the caller proc if procName is "".
+# Store the values of the static variables either of proc $procName or the
+# caller proc if $procName is "".
 proc storage::persist-statics {{procName ""}} {
     if {$procName eq ""} {
         set procName [storage::caller-full-name 2]

@@ -71,41 +71,35 @@ proc http::form-decode {formData} {
     return $result
 }
 
-# Handle HTTP requests over a channel and send responses.
+# Handle HTTP requests over a channel and send responses. A very hacky HTTP
+# implementation.
 proc http::serve {channel clientaddr clientport routes} {
     http::debug-message "Client connected: $clientaddr"
 
-    set method {}
-    set url {}
+    set request {}
+
     set get 0
-    set getData {}
     set post 0
-    set postData {}
     set postContentLength 0
 
     while {[gets $channel buf]} {
         set buf [string trimright $buf \r]
         http::debug-message [list $buf]
         # make this a switch statement
-        if {$url eq ""} {
+        if {![dict exists $request url]} {
             set bufArr [split $buf]
-            set method [lindex $bufArr 0]
-            set url [lindex $bufArr 1]
-
-            set getData [form-decode \
-                    [lindex [split [lindex $bufArr 1] ?] 1]]
-            if {$getData ne ""} {
+            dict set request method [lindex $bufArr 0]
+            lassign [split [lindex $bufArr 1] ?] request(url) formData
+            dict set request form [form-decode $formData]
+            if {$request(form) ne ""} {
                 set get 1
             }
-
-            http::debug-message "GET request: [list $getData]"
+            http::debug-message "GET request: [list $request(form)]"
         }
         if {!$post} {
             set postContentLength [scan $buf "Content-Length: %d"]
             if {[string is integer -strict $postContentLength]} {
                 set post 1
-            } else {
-                set postContentLength 0
             }
         }
         if {$buf eq ""} {
@@ -117,16 +111,10 @@ proc http::serve {channel clientaddr clientport routes} {
     if {$post} {
         set postString [read $channel $postContentLength]
         http::debug-message "POST request: $postString"
-        set postData [form-decode $postString]
+        dict set request formPost [form-decode $postString]
+    } else {
+        dict set request formPost {}
     }
-
-    set request [dict create \
-            method $method \
-            url $url \
-            host 0.0.0.0 \
-            form $getData \
-            formPost $postData \
-            remoteAddress $clientaddr]
 
     http::debug-message "Responding."
     puts -nonewline $channel [
@@ -170,15 +158,12 @@ proc http::route {request routes} {
 # Return route variables contained in the url if it can be parsed as route
 # $route. Return 0 otherwise.
 proc http::get-route-variables {route url} {
-    # set route [string trimright $route /]
-    # set url [string trimright $url /]
-
     set routeVars {}
     foreach routeSegment [split $route /] urlSegment [split $url /] {
         if {[string index $routeSegment 0] eq ":"} {
             dict set routeVars [string range $routeSegment 1 end] $urlSegment
         } else {
-            # Static parts of the URL and route should be equal
+            # Static parts of the URL and the route should be equal.
             if {$urlSegment ne $routeSegment} {
                 return 0
             }
@@ -187,7 +172,7 @@ proc http::get-route-variables {route url} {
     return $routeVars
 }
 
-# Return the first route out of list $routeList that matches $url.
+# Return the first route out of the list $routeList that matches $url.
 proc http::match-route {routeList url} {
     foreach route $routeList {
         set routeVars [http::get-route-variables $route $url]

@@ -34,12 +34,23 @@ assert-all-equal \
                 {/bye/:name/:town} {/hello/john/smallville/}] \
         0
 
+assert-all-equal [http::form-decode a=b&c=d] [dict create {*}{
+    a b c d
+}]
+
+assert-all-equal [http::form-decode message=Hello%2C+world%21] [dict create {*}{
+    message {Hello, world!}
+}]
+
 # html tests
 source html.tcl
 
 foreach t {{!@#$%^&*()_+} {<b>Hello!</b>}} {
     assert-all-equal [html::unescape [html::escape $t]] $t
 }
+
+assert-all-equal [b "Hello!"] [b "" "Hello!"] {<b>Hello!</b>}
+assert-all-equal [br] [br ""] {<br>}
 
 # example code and http tests
 set curlAvailable [expr {![catch {exec curl -V}]}]

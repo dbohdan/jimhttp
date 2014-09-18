@@ -1,6 +1,6 @@
-A prototype of a web framework for [Jim Tcl](http://jim.tcl.tk/).
+A web microframework prototype for [Jim Tcl](http://jim.tcl.tk/). Provides a rough implementation of the HTTP protocol, routing, an HTML DSL and persistent storage powered by SQLite3.
 
-# Use example
+# Use examples
 ```Tcl
 source http.tcl
 
@@ -8,6 +8,23 @@ http::add-handler /hello/:name/:town {
     return [list "Hello, $routeVars(name) from $routeVars(town)!"]
 }
 
+http::start-server 127.0.0.1 8080
+```
+
+```Tcl
+source http.tcl
+source storage.tcl
+
+http::add-handler /counter-persistent {{counter 0}} {
+    storage::restore-statics
+
+    incr counter
+
+    storage::persist-statics
+    return [list $counter]
+}
+
+storage::init
 http::start-server 127.0.0.1 8080
 ```
 

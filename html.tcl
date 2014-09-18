@@ -67,7 +67,8 @@ proc html::zip args {
 
 # Here we actually create the tag procs. Proc static variables are not use for
 # the sake of Tcl compatibility.
-set tags {head body table td tr ul li a div pre form textarea h1 h2 h3 h4 h5}
+set tags {head body table td tr ul li a div pre form textarea h1 h2 h3 h4 h5
+        b i u s tt}
 set tagsWithoutContent {input submit br hr}
 
 foreach tag $tags {

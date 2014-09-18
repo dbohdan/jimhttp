@@ -37,11 +37,14 @@ http::add-handler / {
 
 # Process POST form data for the form at /.
 http::add-handler /form {
-    return [list \
-            [format \
-                {You (%s) said:<br>%s} \
+    if {[dict exists $request formPost name] && \
+            [dict exists $request formPost message]} {
+        return [list [format {You (%s) said:<br>%s} \
                 [html::escape [dict get $request formPost name]] \
                 [html::escape [dict get $request formPost message]]]]
+    } else {
+        return [list "Please fill in the form at [a {href /} /]."]
+    }
 }
 
 # Shut down the HTTP server.
@@ -70,13 +73,13 @@ http::add-handler /counter {{counter 0}} {
 }
 
 # Persistent storage.
-http::add-handler /counter-persistent {{pcounter 0}} {
+http::add-handler /counter-persistent {{counter 0}} {
     storage::restore-statics
 
-    incr pcounter
+    incr counter
 
     storage::persist-statics
-    return [list $pcounter]
+    return [list $counter]
 }
 
 # AJAX requests.
