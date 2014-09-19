@@ -17,7 +17,7 @@ if {$http::DEBUG eq ""} {
 # An example of the HTML DSL from html.tcl. It also provides links to
 # other examples.
 http::add-handler / {
-    return [list \
+    return [http::make-response \
             [html "" \n \
                 [form {action /form method POST} \n \
                     [h1 "Hello"] [br] \n \
@@ -39,11 +39,12 @@ http::add-handler / {
 http::add-handler /form {
     if {[dict exists $request formPost name] && \
             [dict exists $request formPost message]} {
-        return [list [format {You (%s) said:<br>%s} \
+        return [http::make-response [format {You (%s) said:<br>%s} \
                 [html::escape [dict get $request formPost name]] \
                 [html::escape [dict get $request formPost message]]]]
     } else {
-        return [list "Please fill in the form at [a {href /} /]."]
+        return [http::make-response \
+                "Please fill in the form at [a {href /} /]."]
     }
 }
 
@@ -51,25 +52,26 @@ http::add-handler /form {
 http::add-handler /quit {
     global http::done
     set http::done 1
-    return [list "Bye!"]
+    return [http::make-response "Bye!"]
 }
 
 # Process route variables. Their values are available to the handler script
 # through the dict routeVars.
 http::add-handler /hello/:name/:town {
-    return [list "Hello, $routeVars(name) from $routeVars(town)!"]
+    return [http::make-response \
+            "Hello, $routeVars(name) from $routeVars(town)!"]
 }
 
 # Table generation using html.tcl.
 http::add-handler /table {
-    return [list [html::make-table {1 2} {3 4}]]
+    return [http::make-response [html::make-table {1 2} {3 4}]]
 }
 
 # Static variables in a handler.
 http::add-handler /counter {{counter 0}} {
     incr counter
 
-    return [list $counter]
+    return [http::make-response $counter]
 }
 
 # Persistent storage.
@@ -79,12 +81,12 @@ http::add-handler /counter-persistent {{counter 0}} {
     incr counter
 
     storage::persist-statics
-    return [list $counter]
+    return [http::make-response $counter]
 }
 
 # AJAX requests.
 http::add-handler /ajax {
-    return [list {
+    return [http::make-response {
         <!DOCTYPE html>
         <html>
         <body>

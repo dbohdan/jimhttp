@@ -117,10 +117,7 @@ proc http::serve {channel clientaddr clientport routes} {
     }
 
     http::debug-message "Responding."
-    puts -nonewline $channel [
-        lassign [route $request $routes] body headers
-        http::make-response $body $headers
-    ]
+    puts -nonewline $channel [http::route $request $routes]
 
     close $channel
 }
@@ -135,7 +132,9 @@ proc http::start-server {ipAddress port} {
         set client [$http::serverSocket accept addr]
         http::serve $client {*}[split $addr :] $http::routes
     }
+    http::debug-message "Started server on $ipAddress:$port."
     vwait http::done
+    http::debug-message "The server has shut down."
 }
 
 # Call route handler for the request url if available and return its result.
