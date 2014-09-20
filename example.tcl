@@ -33,6 +33,7 @@ http::add-handler GET / {
                     [li [a {href "/hello/John/Smallville"} \
                             /hello/John/Smallville]] \n \
                     [li [a {href "/table"} /table]] \n \
+                    [li [a {href "/static.jpg"} /static.jpg]] \n \
                     [li [a {href "/quit"} /quit]]]]]
 }
 
@@ -112,6 +113,9 @@ http::add-handler GET /ajax {
         </html>
     }]
 }
+
+# Static file.
+http::add-static-file /static.jpg
 
 storage::init
 http::start-server 127.0.0.1 8080

@@ -1,4 +1,4 @@
-# Simple persistent storage for Jim Tcl.
+# Simple persistent storage.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 

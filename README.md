@@ -39,3 +39,9 @@ cd jimtcl
 make
 sudo make install
 ```
+
+# License
+
+MIT.
+
+Picture by [Steven Lewis](http://notsteve.com/). License: [CC0](https://creativecommons.org/publicdomain/zero/1.0/).

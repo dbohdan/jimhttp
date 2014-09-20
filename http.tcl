@@ -1,6 +1,8 @@
 # A minimal HTTP server framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
+source mime.tcl
+
 set http::DEBUG 0
 
 set http::statusCodePhrases [dict create {*}{
@@ -143,7 +145,12 @@ proc http::route {request routes} {
     http::debug-message "request: $request"
 
     set url [dict get $request url]
-    set matchResult [http::match-route [dict keys $routes($request(method))] $url]
+    if {$url eq ""} {
+        set url /
+    }
+
+    set matchResult [http::match-route \
+            [dict keys $routes($request(method))] $url]
     if {$matchResult != 0} {
         set procName [dict get $routes $request(method) [lindex $matchResult 0]]
         set result [$procName $request [lindex $matchResult 1]]
@@ -192,4 +199,24 @@ proc http::add-handler {methods routes {statics {}} script} {
             dict set http::routes $method $route $procName
         }
     }
+}
+
+# Return the contents of $filename.
+proc http::read-file {filename} {
+    set fpvar [open $filename r]
+    fconfigure $fpvar -translation binary
+    set content [read $fpvar]
+    close $fpvar
+    return $content
+}
+
+# Add handler to return the contents of a static file. The file is either
+# $filename or [file tail $route] if no filename is given.
+proc http::add-static-file {route {filename {}}} {
+    if {$filename eq ""} {
+        set filename [file tail $route]
+    }
+    http::add-handler GET $route [format {
+        http::make-response [http::read-file %s] {contentType %s}
+    } $filename [mime::type $filename]]
 }
