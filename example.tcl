@@ -16,7 +16,7 @@ if {$http::DEBUG eq ""} {
 
 # An example of the HTML DSL from html.tcl. It also provides links to
 # other examples.
-http::add-handler / {
+http::add-handler GET / {
     return [http::make-response \
             [html "" \n \
                 [form {action /form method POST} \n \
@@ -29,6 +29,7 @@ http::add-handler / {
                     [li [a {href "/counter"} /counter]] \n \
                     [li [a {href "/counter-persistent"} \
                             /counter-persistent]] \n \
+                    [li [a {href "/hello/John"} /hello/John]] \n \
                     [li [a {href "/hello/John/Smallville"} \
                             /hello/John/Smallville]] \n \
                     [li [a {href "/table"} /table]] \n \
@@ -36,7 +37,7 @@ http::add-handler / {
 }
 
 # Process POST form data for the form at /.
-http::add-handler /form {
+http::add-handler {GET POST} /form {
     if {[dict exists $request formPost name] && \
             [dict exists $request formPost message]} {
         return [http::make-response [format {You (%s) said:<br>%s} \
@@ -49,7 +50,7 @@ http::add-handler /form {
 }
 
 # Shut down the HTTP server.
-http::add-handler /quit {
+http::add-handler GET /quit {
     global http::done
     set http::done 1
     return [http::make-response "Bye!"]
@@ -57,25 +58,29 @@ http::add-handler /quit {
 
 # Process route variables. Their values are available to the handler script
 # through the dict routeVars.
-http::add-handler /hello/:name/:town {
-    return [http::make-response \
-            "Hello, $routeVars(name) from $routeVars(town)!"]
+http::add-handler GET {/hello/:name /hello/:name/:town} {
+    set response "Hello, $routeVars(name)"
+    if {[dict exists $routeVars town]} {
+        append response " from $routeVars(town)"
+    }
+    append response !
+    return [http::make-response $response]
 }
 
 # Table generation using html.tcl.
-http::add-handler /table {
+http::add-handler GET /table {
     return [http::make-response [html::make-table {1 2} {3 4}]]
 }
 
 # Static variables in a handler.
-http::add-handler /counter {{counter 0}} {
+http::add-handler GET /counter {{counter 0}} {
     incr counter
 
     return [http::make-response $counter]
 }
 
 # Persistent storage.
-http::add-handler /counter-persistent {{counter 0}} {
+http::add-handler GET /counter-persistent {{counter 0}} {
     storage::restore-statics
 
     incr counter
@@ -85,7 +90,7 @@ http::add-handler /counter-persistent {{counter 0}} {
 }
 
 # AJAX requests.
-http::add-handler /ajax {
+http::add-handler GET /ajax {
     return [http::make-response {
         <!DOCTYPE html>
         <html>

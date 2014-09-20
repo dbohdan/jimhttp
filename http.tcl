@@ -143,14 +143,13 @@ proc http::route {request routes} {
     http::debug-message "request: $request"
 
     set url [dict get $request url]
-
-    set matchResult [http::match-route [dict keys $routes] $url]
+    set matchResult [http::match-route [dict keys $routes($request(method))] $url]
     if {$matchResult != 0} {
-        set procName [dict get $routes [lindex $matchResult 0]]
+        set procName [dict get $routes $request(method) [lindex $matchResult 0]]
         set result [$procName $request [lindex $matchResult 1]]
         return $result
     } else {
-        return {"<h1>Not found.</h1>" {code 404}}
+        return [http::make-response "<h1>Not found.</h1>" {code 404}]
     }
 }
 
@@ -183,10 +182,14 @@ proc http::match-route {routeList url} {
 }
 
 # Create a proc to handle the route $route with body $script.
-proc http::add-handler {route {statics {}} script} {
+proc http::add-handler {methods routes {statics {}} script} {
     global http::routes
 
-    set procName "handler::$route"
+    set procName "handler::$routes"
     proc $procName {request routeVars} $statics $script
-    dict set http::routes $route $procName
+    foreach method $methods {
+        foreach route $routes {
+            dict set http::routes $method $route $procName
+        }
+    }
 }

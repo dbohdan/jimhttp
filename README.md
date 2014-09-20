@@ -4,7 +4,7 @@ A web microframework prototype for [Jim Tcl](http://jim.tcl.tk/). Provides a rou
 ```Tcl
 source http.tcl
 
-http::add-handler /hello/:name/:town {
+http::add-handler GET /hello/:name/:town {
     return [http::make-response \
             "Hello, $routeVars(name) from $routeVars(town)!"]
 }
@@ -16,7 +16,7 @@ http::start-server 127.0.0.1 8080
 source http.tcl
 source storage.tcl
 
-http::add-handler /counter-persistent {{counter 0}} {
+http::add-handler GET /counter-persistent {{counter 0}} {
     storage::restore-statics
 
     incr counter
