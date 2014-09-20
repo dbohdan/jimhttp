@@ -185,7 +185,7 @@ proc http::match-route {routeList url} {
 proc http::add-handler {methods routes {statics {}} script} {
     global http::routes
 
-    set procName "handler::$routes"
+    set procName "handler::${methods}::${routes}"
     proc $procName {request routeVars} $statics $script
     foreach method $methods {
         foreach route $routes {
