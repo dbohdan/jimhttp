@@ -1,4 +1,6 @@
-A web microframework prototype for [Jim Tcl](http://jim.tcl.tk/). Provides a rough implementation of the HTTP protocol, routing, an HTML DSL and persistent storage powered by SQLite3.
+A web microframework prototype for [Jim Tcl](http://jim.tcl.tk/). Provides a
+rough implementation of the HTTP protocol, routing, templates, an HTML DSL and
+persistent storage powered by SQLite3.
 
 # Use examples
 ```Tcl
@@ -30,9 +32,11 @@ http::start-server 127.0.0.1 8080
 ```
 
 # Requirements
-Compile the latest Jim Tcl from the Git repository. The current stable release (0.75) or earlier releases will not work.
 
-```
+Compile the latest Jim Tcl from the Git repository. The current stable release
+(0.75) or earlier releases will not work.
+
+```sh
 git clone https://github.com/msteveb/jimtcl.git
 cd jimtcl
 ./configure --with-ext="oo tree binary sqlite3" --enable-utf8 --ipv6
@@ -44,4 +48,5 @@ sudo make install
 
 MIT.
 
-Picture by [Steven Lewis](http://notsteve.com/). License: [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
+`static.jpg` photo by [Steven Lewis](http://notsteve.com/). License:
+[CC0](https://creativecommons.org/publicdomain/zero/1.0/).

@@ -5,6 +5,7 @@
 source http.tcl
 source html.tcl
 source storage.tcl
+source template.tcl
 
 set http::DEBUG [lindex $argv 0]
 if {$http::DEBUG eq ""} {
@@ -33,6 +34,7 @@ http::add-handler GET / {
                     [li [a {href "/hello/John/Smallville"} \
                             /hello/John/Smallville]] \n \
                     [li [a {href "/table"} /table]] \n \
+                    [li [a {href "/template"} /template]] \n \
                     [li [a {href "/static.jpg"} /static.jpg]] \n \
                     [li [a {href "/quit"} /quit]]]]]
 }
@@ -112,6 +114,24 @@ http::add-handler GET /ajax {
         </body>
         </html>
     }]
+}
+
+# HTML templates.
+http::add-handler GET /template {
+    return [http::make-response [eval [template::parse {
+        <!DOCTYPE html>
+        <html>
+        <body>
+            The most populous metropolitan areas in the world are:
+            <dl>
+            <% foreach {city population} \
+                    {Tokyo 37.8 Seoul 25.62 Shanghai 24.75} { %>
+                <dt><%= $city %></dt><dd><%= $population %> million people</dd>
+            <% } %>
+            </dl>
+        </body>
+        </html>
+    }]]]
 }
 
 # Static file.

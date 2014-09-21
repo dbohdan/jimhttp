@@ -1,4 +1,4 @@
-# An HTML templating DSL for Jim Tcl.
+# An HTML DSL for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
