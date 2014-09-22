@@ -51,7 +51,7 @@ $body}
     }]
 
     set headers [dict merge $http::headerDefaults $headers]
-    set length [string length $body]
+    set length [string bytelength $body]
 
     set response [subst $http::responseTemplate]
 
