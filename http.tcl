@@ -4,8 +4,10 @@
 source mime.tcl
 
 set http::DEBUG 0
+set http::maxRequestLength [expr 16*1024*1024]
 
 set http::statusCodePhrases [dict create {*}{
+    100 Continue
     200 OK
     201 {Created}
     301 {Moved Permanently}
@@ -14,6 +16,8 @@ set http::statusCodePhrases [dict create {*}{
     403 {Forbidden}
     404 {Not Found}
     405 {Method Not Allowed}
+    413 {Request Entity Too Large}
+    500 {Internal Server Error}
 }]
 
 set http::requestFormat [dict create {*}{
@@ -22,6 +26,7 @@ set http::requestFormat [dict create {*}{
     Accept-Charset:         acceptCharset
     Accept-Encoding:        acceptEncoding
     Accept-Language:        acceptLanguage
+    Expect:                 expect
     Host:                   host
     Referer:                referer
     User-Agent:             userAgent
@@ -152,20 +157,22 @@ proc http::parse-value {str} {
 }
 
 # Return the files and formPost fields in encoded in a multipart/form-data form.
+# Very hacky.
 proc http::parse-multipart-data {postString contentType newline} {
     set result {}
     set boundary [dict get \
             [http::parse-value $contentType] boundary]
     set boundaryLength [string length $boundary]
     while {[set part [string-pop postString $boundary]] ne ""} {
-        set hdr [http::parse-headers \
+        set partHeader [http::parse-headers \
                 [split [string-pop part "$newline$newline"] $newline]]
-        # Trim "(\r)\n--" from content.
+        # Trim "(\r)\n--" in content.
         set part [string range $part 0 end-[string length "$newline--"]]
         if {$part ne ""} {
-            set m [http::parse-value $hdr(contentDisposition)]
-            if {[dict exists $m form-data] && [dict exists $m name]} {
-                # File or form field?
+            set m [http::parse-value $partHeader(contentDisposition)]
+            if {[dict exists $m form-data] &&
+                        [dict exists $m name]} {
+                # Store files and form fields separately.
                 if {[dict exists $m filename]} {
                     dict set result files \
                             $m(name) filename $m(filename)
@@ -180,9 +187,23 @@ proc http::parse-multipart-data {postString contentType newline} {
     return $result
 }
 
-# Handle HTTP requests over a channel and send responses. A very hacky HTTP
+# Return error responses.
+proc http::error-response {code} {
+    global http::statusCodePhrases
+    switch -exact -- $code {
+        default {
+            return [http::make-response \
+                    "<h1>Error $code: $http::statusCodePhrases($code)</h1>" \
+                    [list code $code]]
+        }
+    }
+}
+
+# Handle HTTP requests over a channel and send responses. A hacky HTTP
 # implementation.
 proc http::serve {channel clientAddr clientPort routes} {
+    global http::maxRequestLength
+
     http::debug-message "Client connected: $clientAddr"
 
     set newline \r\n ;# TODO: accept requests with nonstandard \n newlines.
@@ -197,27 +218,43 @@ proc http::serve {channel clientAddr clientPort routes} {
     }
 
     set request [http::parse-headers $headerLines]
+    set error 0
 
     # Process POST data.
     if {$request(method) eq "POST"} {
         set request [dict merge {contentType application/x-www-form-urlencoded
                 contentLength 0} $request]
-        # TODO: limit max length.
-        set postString [read $channel $request(contentLength)]
-        if {$request(contentType) eq "application/x-www-form-urlencoded"} {
-            http::debug-message "POST request: {\n$postString}\n"
-            dict set request formPost [form-decode $postString]
-        } elseif {[string match "multipart/form-data*" $request(contentType)]} {
-            http::debug-message "POST request: (multipart/form-data skipped)"
-            set request [dict merge $request [http::parse-multipart-data \
-                    $postString $request(contentType) $newline]]
+
+        if {$request(contentLength) <= $http::maxRequestLength} {
+            if {[dict exists $request expect] &&
+                        ($request(expect) eq "100-continue")} {
+                puts $channel "HTTP/1.1 100 Continue\n"
+            }
+            set postString [read $channel $request(contentLength)]
+            if {$request(contentType) eq "application/x-www-form-urlencoded"} {
+                http::debug-message "POST request: {$postString}\n"
+                dict set request formPost [form-decode $postString]
+            } elseif {[string match "multipart/form-data*" \
+                    $request(contentType)]} {
+                http::debug-message \
+                        "POST request: (multipart/form-data skipped)"
+                set request [dict merge $request [http::parse-multipart-data \
+                        $postString $request(contentType) $newline]]
+            }
+        } else {
+            http::debug-message "Request too large: $request(contentLength)."
+            set error 413
         }
     } else {
         dict set request formPost {}
     }
 
-    http::debug-message "Responding."
-    puts -nonewline $channel [http::route $request $routes]
+    if {!$error} {
+        http::debug-message "Responding."
+        puts -nonewline $channel [http::route $request $routes]
+    } else {
+        puts -nonewline $channel [http::error-response $error]
+    }
 
     close $channel
 }
@@ -246,6 +283,7 @@ proc http::route {request routes} {
         set requestPrime $request
         dict set requestPrime files "(not shown here)"
         http::debug-message "request: $requestPrime"
+        set requestPrime {}
     } else {
         http::debug-message "request: $request"
     }
@@ -262,7 +300,7 @@ proc http::route {request routes} {
         set result [$procName $request [lindex $matchResult 1]]
         return $result
     } else {
-        return [http::make-response "<h1>Not found.</h1>" {code 404}]
+        return [http::error-response 404]
     }
 }
 
