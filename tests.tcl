@@ -62,17 +62,24 @@ if {$curlAvailable} {
     proc test-url args {
         puts [exec curl -v {*}$args]\n
     }
+
+    set port 8080
+    set url "http://localhost:$port"
+    if {![catch {test-url $url}]} {
+        error "Can't test example: port $port taken!"
+    }
+
     exec jimsh example.tcl 0 &
-    test-url http://localhost:8080/
-    test-url http://localhost:8080/does-not-exist
-    test-url http://localhost:8080/
+    test-url $url
+    test-url $url/does-not-exist
+    test-url $url
 
     # Binary file corruption test.
     set tempFile1 /tmp/jimhttp.test
     set tempFile2 /tmp/jimhttp.test.echo
     exec dd if=/dev/urandom of=$tempFile1 bs=1024 count=1024
     exec curl -o "$tempFile2" -X POST -F "testfile=@$tempFile1" \
-            http://localhost:8080/file-echo
+            $url/file-echo
     set fileContents1 [http::read-file $tempFile1]
     set fileContents2 [http::read-file $tempFile2]
 
@@ -85,5 +92,5 @@ if {$curlAvailable} {
     file delete $tempFile2
     # End file corruption test
 
-    test-url http://localhost:8080/quit
+    test-url $url/quit
 }
