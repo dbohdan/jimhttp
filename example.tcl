@@ -138,7 +138,8 @@ http::add-handler GET /template {
 
 # File uploading. Sends the uploaded file back to the client.
 http::add-handler {GET POST} /file-echo {
-    if {$request(method) eq "POST"} {
+    if {($request(method) eq "POST") &&
+            [dict exists $request files testfile content]} {
         return [http::make-response [dict get $request files testfile content] \
                 [list contentType \
                         [mime::type \

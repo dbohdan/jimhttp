@@ -240,7 +240,15 @@ proc http::start-server {ipAddress port} {
 # Call route handler for the request url if available and return its result.
 # Otherwise return a 404 error message.
 proc http::route {request routes} {
-    http::debug-message "request: $request"
+    # Don't show the contents of large files in the debug message.
+    if {[dict exists $request files] &&
+                [string length $request(files)] > 8*1024} {
+        set requestPrime $request
+        dict set requestPrime files "(not shown here)"
+        http::debug-message "request: $requestPrime"
+    } else {
+        http::debug-message "request: $request"
+    }
 
     set url [dict get $request url]
     if {$url eq ""} {
