@@ -3,9 +3,13 @@
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
-proc assert expression {
+proc assert {expression {message ""}} {
     if {![expr $expression]} {
-        error "Not true: $expression"
+        set errorMessage "Not true: $expression"
+        if {$message ne ""} {
+            append errorMessage " ($message)"
+        }
+        error $errorMessage
     }
 }
 
@@ -62,5 +66,24 @@ if {$curlAvailable} {
     test-url http://localhost:8080/
     test-url http://localhost:8080/does-not-exist
     test-url http://localhost:8080/
+
+    # Binary file corruption test.
+    set tempFile1 /tmp/jimhttp.test
+    set tempFile2 /tmp/jimhttp.test.echo
+    exec dd if=/dev/urandom of=$tempFile1 bs=1024 count=1024
+    exec curl -o "$tempFile2" -X POST -F "testfile=@$tempFile1" \
+            http://localhost:8080/file-echo
+    set fileContents1 [http::read-file $tempFile1]
+    set fileContents2 [http::read-file $tempFile2]
+
+    assert [list \
+        [string bytelength $fileContents1] == \
+        [string bytelength $fileContents2]] "file corruption test file size"
+    assert [expr {$fileContents1 eq $fileContents2}] \
+            "file corruption test file contents"
+    file delete $tempFile1
+    file delete $tempFile2
+    # End file corruption test
+
     test-url http://localhost:8080/quit
 }
