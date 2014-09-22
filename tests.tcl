@@ -10,9 +10,9 @@ proc assert expression {
 }
 
 proc assert-all-equal args {
-    set prevArg [lindex $args 0]
+    set firstArg [lindex $args 0]
     foreach arg [lrange $args 1 end] {
-        assert [list \"$arg\" eq \"$prevArg\"]
+        assert [list \"$arg\" eq \"$firstArg\"]
     }
 }
 

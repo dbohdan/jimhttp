@@ -25,17 +25,19 @@ http::add-handler GET / {
                     [input {name name type text value Anonymous}] [br] \n \
                     [textarea {name message} "Your message here."] [br] \n \
                     [input {type submit}]] [br] \n \
-                [ul "" \
+                [ul {} \
                     [li [a {href "/ajax"} /ajax]] \n \
                     [li [a {href "/counter"} /counter]] \n \
                     [li [a {href "/counter-persistent"} \
                             /counter-persistent]] \n \
+                    [li [a {href "/file-echo"} \
+                            /file-echo]] \n \
                     [li [a {href "/hello/John"} /hello/John]] \n \
                     [li [a {href "/hello/John/Smallville"} \
                             /hello/John/Smallville]] \n \
+                    [li [a {href "/static.jpg"} /static.jpg]] \n \
                     [li [a {href "/table"} /table]] \n \
                     [li [a {href "/template"} /template]] \n \
-                    [li [a {href "/static.jpg"} /static.jpg]] \n \
                     [li [a {href "/quit"} /quit]]]]]
 }
 
@@ -132,6 +134,24 @@ http::add-handler GET /template {
         </body>
         </html>
     }]]]
+}
+
+# File uploading. Sends the uploaded file back to the client.
+http::add-handler {GET POST} /file-echo {
+    if {$request(method) eq "POST"} {
+        return [http::make-response [dict get $request files testfile content] \
+                [list contentType \
+                        [mime::type \
+                                [dict get $request files testfile filename]]]]
+    } else {
+        return [http::make-response \
+                [html "" \n \
+                    [form {action /file-echo method POST
+                            enctype {multipart/form-data}} \n \
+                    [input {type hidden name test value blah}] \
+                    [input {type file name testfile}] " " \
+                    [input {type submit}]]]]
+    }
 }
 
 # Static file.

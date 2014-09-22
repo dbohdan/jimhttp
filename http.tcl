@@ -16,6 +16,24 @@ set http::statusCodePhrases [dict create {*}{
     405 {Method Not Allowed}
 }]
 
+set http::requestFormat [dict create {*}{
+    Connection:             connection
+    Accept:                 accept
+    Accept-Charset:         acceptCharset
+    Accept-Encoding:        acceptEncoding
+    Accept-Language:        acceptLanguage
+    Host:                   host
+    Referer:                referer
+    User-Agent:             userAgent
+    Content-Length:         contentLength
+    Content-Type:           contentType
+    Content-Disposition:    contentDisposition
+}]
+
+set http::methods [list {*}{
+    OPTIONS GET HEAD POST PUT DELETE TRACE CONNECT
+}]
+
 # Return the text of an HTTP response with body $body.
 proc http::make-response {body {headers {}}} {
     global http::statusCodePhrases
@@ -73,47 +91,127 @@ proc http::form-decode {formData} {
     return $result
 }
 
+# Return the content up to but not including $separator in variable
+# $stringVarName. Remove this content and the separator following it from the
+# $stringVarName. If $separator isn't in $stringVarName's value return the whole
+# string.
+proc http::string-pop {stringVarName separator} {
+    upvar 1 $stringVarName str
+    set substrLength [string first $separator $str]
+    if {$substrLength > -1} {
+        set substr [string range $str 1 $substrLength-1]
+        set str [string range $str $substrLength+[string length $separator] end]
+    } else {
+        set substr $str
+        set str ""
+    }
+    return $substr
+}
+
+# Parse HTTP request headers presented as a list of lines into a dict.
+proc http::parse-headers {headerLines} {
+    global http::requestFormat
+    global http::methods
+
+    set headers {}
+    set field {}
+    set value {}
+
+    foreach line $headerLines {
+        # Split $line on its first space.
+        regexp {^(.*?) (.*)$} $line _ field value
+        http::debug-message [list $line]
+
+        if {[lsearch -exact $http::methods $field] > -1} {
+            dict set headers method $field
+            lassign [split [lindex [split $value] 0] ?] headers(url) formData
+            dict set headers form [form-decode $formData]
+        } else {
+            # Translate "Content-Type:" to "contentType", etc.
+            if {[dict exists $http::requestFormat $field]} {
+                dict set headers $http::requestFormat($field) $value
+            }
+        }
+    }
+    return $headers
+}
+
+# Convert an HTTP request value of type {string;key1=value1; key2="value2"} to
+# dict.
+proc http::parse-value {str} {
+    set result {}
+    foreach x [split $str ";"] {
+        set x [string trimleft $x " "] ;# For "; ".
+        if {[regexp {(.*?)="?([^"]*)"?} $x _ name value]} {
+            dict set result $name $value
+        } else {
+            dict set result $x 1
+        }
+    }
+    return $result
+}
+
+# Return the files and formPost fields in encoded in a multipart/form-data form.
+proc http::parse-multipart-data {postString contentType newline} {
+    set result {}
+    set boundary [dict get \
+            [http::parse-value $contentType] boundary]
+    set boundaryLength [string length $boundary]
+    while {[set part [string-pop postString $boundary]] ne ""} {
+        set hdr [http::parse-headers \
+                [split [string-pop part "$newline$newline"] $newline]]
+        # Trim "(\r)\n--" from content.
+        set part [string range $part 0 end-[string length "$newline--"]]
+        if {$part ne ""} {
+            set m [http::parse-value $hdr(contentDisposition)]
+            if {[dict exists $m form-data] && [dict exists $m name]} {
+                # File or form field?
+                if {[dict exists $m filename]} {
+                    dict set result files \
+                            $m(name) filename $m(filename)
+                    dict set result files \
+                            $m(name) content $part
+                } else {
+                    dict set result formPost $m(name) $part
+                }
+            }
+        }
+    }
+    return $result
+}
+
 # Handle HTTP requests over a channel and send responses. A very hacky HTTP
 # implementation.
-proc http::serve {channel clientaddr clientport routes} {
-    http::debug-message "Client connected: $clientaddr"
+proc http::serve {channel clientAddr clientPort routes} {
+    http::debug-message "Client connected: $clientAddr"
 
-    set request {}
+    set newline \r\n ;# TODO: accept requests with nonstandard \n newlines.
 
-    set get 0
-    set post 0
-    set postContentLength 0
-
+    set headerLines {}
     while {[gets $channel buf]} {
         set buf [string trimright $buf \r]
-        http::debug-message [list $buf]
-        # make this a switch statement
-        if {![dict exists $request url]} {
-            set bufArr [split $buf]
-            dict set request method [lindex $bufArr 0]
-            lassign [split [lindex $bufArr 1] ?] request(url) formData
-            dict set request form [form-decode $formData]
-            if {$request(form) ne ""} {
-                set get 1
-            }
-            http::debug-message "GET request: [list $request(form)]"
-        }
-        if {!$post} {
-            set postContentLength [scan $buf "Content-Length: %d"]
-            if {[string is integer -strict $postContentLength]} {
-                set post 1
-            }
-        }
         if {$buf eq ""} {
             break
         }
+        lappend headerLines $buf
     }
 
+    set request [http::parse-headers $headerLines]
+
     # Process POST data.
-    if {$post} {
-        set postString [read $channel $postContentLength]
-        http::debug-message "POST request: $postString"
-        dict set request formPost [form-decode $postString]
+    if {$request(method) eq "POST"} {
+        set request [dict merge {contentType application/x-www-form-urlencoded
+                contentLength 0} $request]
+        # TODO: limit max length.
+        set postString [read $channel $request(contentLength)]
+        if {$request(contentType) eq "application/x-www-form-urlencoded"} {
+            http::debug-message "POST request: {\n$postString}\n"
+            dict set request formPost [form-decode $postString]
+        } elseif {[string match "multipart/form-data*" $request(contentType)]} {
+            http::debug-message "POST request: (multipart/form-data skipped)"
+            set request [dict merge $request [http::parse-multipart-data \
+                    $postString $request(contentType) $newline]]
+        }
     } else {
         dict set request formPost {}
     }
