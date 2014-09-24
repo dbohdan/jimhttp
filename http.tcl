@@ -1,4 +1,4 @@
-# A minimal HTTP server framework for Jim Tcl.
+# An HTTP server and web framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 source mime.tcl
@@ -21,18 +21,18 @@ set http::statusCodePhrases [dict create {*}{
 }]
 
 set http::requestFormat [dict create {*}{
-    Connection:             connection
     Accept:                 accept
     Accept-Charset:         acceptCharset
     Accept-Encoding:        acceptEncoding
     Accept-Language:        acceptLanguage
+    Connection:             connection
+    Content-Disposition:    contentDisposition
+    Content-Length:         contentLength
+    Content-Type:           contentType
     Expect:                 expect
     Host:                   host
     Referer:                referer
     User-Agent:             userAgent
-    Content-Length:         contentLength
-    Content-Type:           contentType
-    Content-Disposition:    contentDisposition
 }]
 
 set http::methods [list {*}{
@@ -206,11 +206,22 @@ proc http::serve {channel clientAddr clientPort routes} {
 
     http::debug-message "Client connected: $clientAddr"
 
-    set newline \r\n ;# TODO: accept requests with nonstandard \n newlines.
+    set newline \r\n
 
     set headerLines {}
+    set firstLine 1
     while {[gets $channel buf]} {
-        set buf [string trimright $buf \r]
+        if {$firstLine} {
+            # Accept requests with nonstandard \n newlines, e.g., over telnet.
+            if {[string index $buf end] ne "\r"} {
+                set newline "\n"
+            }
+            set firstLine 0
+            http::debug-message {Changing newline from "\r\n" to "\n".}
+        }
+        if {$newline eq "\r\n"} {
+            set buf [string trimright $buf \r]
+        }
         if {$buf eq ""} {
             break
         }
