@@ -222,13 +222,13 @@ proc http::serve {channel clientAddr clientPort routes} {
     while {[gets $channel buf]} {
         if {$firstLine} {
             # Change the newline variable when the incoming request has
-            # nonstandard \n newlines. This happens, e.g., over telnet.
+            # nonstandard \n newlines. This happens, e.g., when you use netcat.
             if {[string index $buf end] ne "\r"} {
                 set newline "\n"
+                http::debug-message \
+                        {The client uses \n instead of \r\n for newline.}
             }
             set firstLine 0
-            http::debug-message \
-                    {The client uses \n instead of \r\n for newline.}
         }
         if {$newline eq "\r\n"} {
             set buf [string trimright $buf \r]
