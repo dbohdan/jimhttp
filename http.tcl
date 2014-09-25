@@ -160,8 +160,10 @@ proc http::parse-value {str} {
 # Very hacky.
 proc http::parse-multipart-data {postString contentType newline} {
     set result {}
-    set boundary [dict get \
-            [http::parse-value $contentType] boundary]
+    if {[catch {set boundary [dict get \
+            [http::parse-value $contentType] boundary]}]} {
+        error {no boundary specified in Content-Type}
+    }
     set boundaryLength [string length $boundary]
     while {[set part [string-pop postString $boundary]] ne ""} {
         set partHeader [http::parse-headers \
@@ -190,12 +192,19 @@ proc http::parse-multipart-data {postString contentType newline} {
 # Return error responses.
 proc http::error-response {code} {
     global http::statusCodePhrases
-    switch -exact -- $code {
-        default {
-            return [http::make-response \
-                    "<h1>Error $code: $http::statusCodePhrases($code)</h1>" \
-                    [list code $code]]
-        }
+    return [http::make-response \
+            "<h1>Error $code: $http::statusCodePhrases($code)</h1>" \
+            [list code $code]]
+}
+
+# Call http::serve. Catch and report any unhandled errors.
+proc http::serve-and-trap-errors {channel clientAddr clientPort routes} {
+    set error [catch {
+        http::serve $channel $clientAddr $clientPort $routes
+    } errorMessage]
+    if {$error} {
+        http::debug-message "Unhandled http::serve error: $errorMessage."
+        catch {close $channel}
     }
 }
 
@@ -212,12 +221,14 @@ proc http::serve {channel clientAddr clientPort routes} {
     set firstLine 1
     while {[gets $channel buf]} {
         if {$firstLine} {
-            # Accept requests with nonstandard \n newlines, e.g., over telnet.
+            # Change the newline variable when the incoming request has
+            # nonstandard \n newlines. This happens, e.g., over telnet.
             if {[string index $buf end] ne "\r"} {
                 set newline "\n"
             }
             set firstLine 0
-            http::debug-message {Changing newline from "\r\n" to "\n".}
+            http::debug-message \
+                    {The client uses \n instead of \r\n for newline.}
         }
         if {$newline eq "\r\n"} {
             set buf [string trimright $buf \r]
@@ -231,30 +242,57 @@ proc http::serve {channel clientAddr clientPort routes} {
     set request [http::parse-headers $headerLines]
     set error 0
 
+    if {(![dict exists $request method]) || (![dict exists $request url])} {
+        http::debug-message "Bad request."
+        set error 400
+    }
+
     # Process POST data.
-    if {$request(method) eq "POST"} {
+    if {($error == 0) && ($request(method) eq "POST")} {
         set request [dict merge {contentType application/x-www-form-urlencoded
                 contentLength 0} $request]
 
-        if {$request(contentLength) <= $http::maxRequestLength} {
-            if {[dict exists $request expect] &&
-                        ($request(expect) eq "100-continue")} {
-                puts $channel "HTTP/1.1 100 Continue\n"
-            }
-            set postString [read $channel $request(contentLength)]
-            if {$request(contentType) eq "application/x-www-form-urlencoded"} {
-                http::debug-message "POST request: {$postString}\n"
-                dict set request formPost [form-decode $postString]
-            } elseif {[string match "multipart/form-data*" \
-                    $request(contentType)]} {
+        if {[string is integer $request(contentLength)] &&
+                ($request(contentLength) > 0)} {
+            if {$request(contentLength) <= $http::maxRequestLength} {
+                if {[dict exists $request expect] &&
+                            ($request(expect) eq "100-continue")} {
+                    puts $channel "HTTP/1.1 100 Continue\n"
+                }
+
+                set postString [read $channel $request(contentLength)]
+                if {$request(contentType) eq
+                        "application/x-www-form-urlencoded"} {
+                    http::debug-message "POST request: {$postString}\n"
+                    dict set request formPost [form-decode $postString]
+                } elseif {[string match "multipart/form-data*" \
+                        $request(contentType)]} {
+                    http::debug-message \
+                            "POST request: (multipart/form-data skipped)"
+                    # Call http::parse-multipart-data to parse the data.
+                    set multipartDataError [catch {
+                        set request [dict merge $request \
+                                [http::parse-multipart-data \
+                                        $postString \
+                                        $request(contentType) \
+                                        $newline]]
+                    } errorMessage]
+                    if {$multipartDataError} {
+                        http::debug-message \
+                                "Bad request: multipart/form-data parse error:\
+                                        $errorMessage."
+                        set error 400
+                    }
+                }
+            } else {
                 http::debug-message \
-                        "POST request: (multipart/form-data skipped)"
-                set request [dict merge $request [http::parse-multipart-data \
-                        $postString $request(contentType) $newline]]
+                        "Request too large: $request(contentLength)."
+                set error 413
             }
         } else {
-            http::debug-message "Request too large: $request(contentLength)."
-            set error 413
+            http::debug-message "Bad request: Content-Length is invalid\
+                    (\"$request(contentLength)\")."
+            set error 400
         }
     } else {
         dict set request formPost {}
@@ -278,7 +316,7 @@ proc http::start-server {ipAddress port} {
     set http::serverSocket [socket stream.server $ipAddress:$port]
     $http::serverSocket readable {
         set client [$http::serverSocket accept addr]
-        http::serve $client {*}[split $addr :] $http::routes
+        http::serve-and-trap-errors $client {*}[split $addr :] $http::routes
     }
     http::debug-message "Started server on $ipAddress:$port."
     vwait http::done
