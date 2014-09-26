@@ -3,7 +3,8 @@
 # License: MIT
 source mime.tcl
 
-set http::DEBUG 0
+set http::verbosity 0
+set http::crashOnError 0
 set http::maxRequestLength [expr 16*1024*1024]
 
 set http::statusCodePhrases [dict create {*}{
@@ -64,16 +65,20 @@ $body}
     set length [string bytelength $body]
 
     set response [subst $http::responseTemplate]
-
     return $response
 }
 
-# Write $message to stdout if $http::DEBUG is true.
-proc http::debug-message message {
-    global http::DEBUG
+# Write $message to stdout if $level <= $http::verbosity. Levels 0 are lower is
+# for errors that are always reported.
+proc http::log {level message} \
+        [list [list levelNumber [dict create {*}{
+            debug 3 info 2 warning 1 error 0 critical -1
+        }]]] {
+    global http::verbosity
+    set levelNumber
 
-    if {$http::DEBUG} {
-        puts $message
+    if {$levelNumber($level) <= $http::verbosity} {
+        puts [format "%-9s %s" "[string toupper $level]:" $message]
     }
 }
 
@@ -130,7 +135,7 @@ proc http::parse-headers {headerLines} {
     foreach line $headerLines {
         # Split $line on its first space.
         regexp {^(.*?) (.*)$} $line _ field value
-        http::debug-message [list $line]
+        http::log debug [list $line]
 
         if {[lsearch -exact $http::methods $field] > -1} {
             dict set headers method $field
@@ -210,8 +215,14 @@ proc http::serve-and-trap-errors {channel clientAddr clientPort routes} {
         http::serve $channel $clientAddr $clientPort $routes
     } errorMessage]
     if {$error} {
-        http::debug-message "Unhandled http::serve error: $errorMessage."
+        http::log critical \
+                "Unhandled http::serve error: $errorMessage."
         catch {close $channel}
+        global http::crashOnError
+        if {$http::crashOnError} {
+            http::log info "Exiting due to error."
+            exit 1
+        }
     }
 }
 
@@ -220,7 +231,7 @@ proc http::serve-and-trap-errors {channel clientAddr clientPort routes} {
 proc http::serve {channel clientAddr clientPort routes} {
     global http::maxRequestLength
 
-    http::debug-message "Client connected: $clientAddr"
+    http::log info "Client connected: $clientAddr"
 
     set newline \r\n
 
@@ -232,8 +243,8 @@ proc http::serve {channel clientAddr clientPort routes} {
             # nonstandard \n newlines. This happens, e.g., when you use netcat.
             if {[string index $buf end] ne "\r"} {
                 set newline "\n"
-                http::debug-message \
-                        {The client uses \n instead of \r\n for newline.}
+                http::log debug \
+                        {The client uses \n instead of \r\n for newline.} \
             }
             set firstLine 0
         }
@@ -250,7 +261,7 @@ proc http::serve {channel clientAddr clientPort routes} {
     set error 0
 
     if {(![dict exists $request method]) || (![dict exists $request url])} {
-        http::debug-message "Bad request."
+        http::log error "Bad request."
         set error 400
     }
 
@@ -270,11 +281,11 @@ proc http::serve {channel clientAddr clientPort routes} {
                 set postString [read $channel $request(contentLength)]
                 if {$request(contentType) eq
                         "application/x-www-form-urlencoded"} {
-                    http::debug-message "POST request: {$postString}\n"
+                    http::log debug "POST request: {$postString}\n"
                     dict set request formPost [form-decode $postString]
                 } elseif {[string match "multipart/form-data*" \
                         $request(contentType)]} {
-                    http::debug-message \
+                    http::log debug \
                             "POST request: (multipart/form-data skipped)"
                     # Call http::parse-multipart-data to parse the data.
                     set multipartDataError [catch {
@@ -285,7 +296,7 @@ proc http::serve {channel clientAddr clientPort routes} {
                                         $newline]]
                     } errorMessage]
                     if {$multipartDataError} {
-                        http::debug-message \
+                        http::log error \
                                 "Bad request: multipart/form-data parse error:\
                                         $errorMessage."
                         set error 400
@@ -293,17 +304,17 @@ proc http::serve {channel clientAddr clientPort routes} {
                 } else {
                     # Put content of other types (e.g., application/json) into
                     # request(formPost) as is.
-                    http::debug-message \
+                    http::log debug \
                             "POST request: ($request(contentType) skipped)"
                     dict set request formPost $postString
                 }
             } else {
-                http::debug-message \
+                http::log error \
                         "Request too large: $request(contentLength)."
                 set error 413
             }
         } else {
-            http::debug-message "Bad request: Content-Length is invalid\
+            http::log error "Bad request: Content-Length is invalid\
                     (\"$request(contentLength)\")."
             set error 400
         }
@@ -312,7 +323,7 @@ proc http::serve {channel clientAddr clientPort routes} {
     }
 
     if {!$error} {
-        http::debug-message "Responding."
+        http::log info "Responding."
         puts -nonewline $channel [http::route $request $routes]
     } else {
         puts -nonewline $channel [http::error-response $error]
@@ -331,9 +342,9 @@ proc http::start-server {ipAddress port} {
         set client [$http::serverSocket accept addr]
         http::serve-and-trap-errors $client {*}[split $addr :] $http::routes
     }
-    http::debug-message "Started server on $ipAddress:$port."
+    http::log info "Started server on $ipAddress:$port."
     vwait http::done
-    http::debug-message "The server has shut down."
+    http::log info "The server has shut down."
 }
 
 # Call route handler for the request url if available and return its result.
@@ -344,10 +355,10 @@ proc http::route {request routes} {
                 [string length $request(files)] > 8*1024} {
         set requestPrime $request
         dict set requestPrime files "(not shown here)"
-        http::debug-message "request: $requestPrime"
+        http::log debug "request: $requestPrime"
         set requestPrime {}
     } else {
-        http::debug-message "request: $request"
+        http::log debug "request: $request"
     }
 
     set url [dict get $request url]

@@ -1,5 +1,5 @@
 A web microframework prototype for [Jim Tcl](http://jim.tcl.tk/). Provides a
-(rough) implementation of the HTTP protocol as well as routing, templates, JSON
+rough implementation of the HTTP protocol as well as routing, templates, JSON
 generation and parsing, an HTML DSL and persistent storage powered by SQLite3.
 
 # Use examples

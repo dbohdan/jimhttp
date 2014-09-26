@@ -8,9 +8,10 @@ source storage.tcl
 source template.tcl
 source json.tcl
 
-set http::DEBUG [lindex $argv 0]
-if {$http::DEBUG eq ""} {
-    set http::DEBUG 1
+set http::crashOnError 1 ;# exit if an error occurs.
+set http::verbosity [lindex $argv 0]
+if {$http::verbosity eq ""} {
+    set http::verbosity 3
 }
 
 # This file showcases the various features of the framework and the different
