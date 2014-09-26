@@ -20,6 +20,7 @@ proc assert-all-equal args {
     }
 }
 
+
 # http tests
 source http.tcl
 
@@ -46,6 +47,7 @@ assert-all-equal [http::form-decode message=Hello%2C+world%21] [dict create {*}{
     message {Hello, world!}
 }]
 
+
 # html tests
 source html.tcl
 
@@ -56,7 +58,63 @@ foreach t {{!@#$%^&*()_+} {<b>Hello!</b>}} {
 assert-all-equal [b "Hello!"] [b "" "Hello!"] {<b>Hello!</b>}
 assert-all-equal [br] [br ""] {<br>}
 
-# example code and http tests
+
+# json tests
+source json.tcl
+
+set d [dict create {*}{
+    array {0 Tokyo 1 Seoul 2 Shanghai}
+    object {Tokyo 37.8 Seoul 25.62 Shanghai 24.75}
+}]
+
+assert-all-equal [json::decode-string {"ab\nc\"de"}] [list "ab\nc\"de" {}]
+assert-all-equal [json::decode-string {"a" b c}] [list "a" { b c}]
+
+assert-all-equal [json::decode-number {0}] [list 0 {}]
+assert-all-equal [json::decode-number {0.}] [list 0. {}]
+assert-all-equal [json::decode-number {-0.1234567890}] [list -0.1234567890 {}]
+assert-all-equal [json::decode-number {-525}] [list -525 {}]
+assert-all-equal [json::decode-number {1E100}] [list 1E100 {}]
+assert-all-equal [json::decode-number {1.23e-99}] [list 1.23e-99 {}]
+assert-all-equal [json::decode-number {1.23e-99, 0, 0}] [list 1.23e-99 {, 0, 0}]
+
+assert-all-equal [json::decode-array {[1.23e-99, 0, 0]}] \
+        [list {1.23e-99 0 0} {}]
+assert-all-equal [json::decode-array {[ 1.23e-99,    0,     0 ]}] \
+        [list {1.23e-99 0 0} {}]
+assert-all-equal [json::decode-array {[1.23e-99, "a", [1,2,3]]}] \
+        [list {1.23e-99 a {1 2 3}} {}]
+assert-all-equal [json::decode-array {["alpha", "beta", "gamma"]} 0] \
+        [list {alpha beta gamma} {}]
+assert-all-equal [json::decode-array {["alpha", "beta", "gamma"]} 1] \
+        [list {0 alpha 1 beta 2 gamma} {}]
+
+assert-all-equal [json::decode-object {{"key": "value"}}] \
+        [list {key value} {}]
+assert-all-equal [json::decode-object {{    "key"   :        "value"    }}] \
+        [list {key value} {}]
+assert-all-equal [json::decode-object {{"key": [1, 2, 3]}}] \
+        [list {key {1 2 3}} {}]
+
+assert-all-equal [json::parse [json::stringify $d 1] 1] $d
+
+assert-all-equal [json::stringify 0] 0
+assert-all-equal [json::stringify 0.5] 0.5
+assert-all-equal [json::stringify Hello] {"Hello"}
+assert-all-equal [json::stringify {key value}] {{"key": "value"}}
+assert-all-equal \
+        [json::stringify {0 a 1 b 2 c} 0] \
+        {{"0": "a", "1": "b", "2": "c"}}
+assert-all-equal \
+        [json::stringify {0 a 1 b 2 c} 1] \
+        {["a", "b", "c"]}
+
+# Invalid JSON.
+assert [catch {[json::parse x]}]
+# Trailing garbage.
+assert [catch {[json::parse {"Hello" blah}]}]
+
+# example web server and http tests
 set curlAvailable [expr {![catch {exec curl -V}]}]
 if {$curlAvailable} {
     proc test-url args {

@@ -6,6 +6,7 @@ source http.tcl
 source html.tcl
 source storage.tcl
 source template.tcl
+source json.tcl
 
 set http::DEBUG [lindex $argv 0]
 if {$http::DEBUG eq ""} {
@@ -35,6 +36,7 @@ http::add-handler GET / {
                     [li [a {href "/hello/John"} /hello/John]] \n \
                     [li [a {href "/hello/John/Smallville"} \
                             /hello/John/Smallville]] \n \
+                    [li [a {href "/json"} /json]] \n \
                     [li [a {href "/static.jpg"} /static.jpg]] \n \
                     [li [a {href "/table"} /table]] \n \
                     [li [a {href "/template"} /template]] \n \
@@ -152,6 +154,24 @@ http::add-handler {GET POST} /file-echo {
                     [input {type hidden name test value blah}] \
                     [input {type file name testfile}] " " \
                     [input {type submit}]]]]
+    }
+}
+
+# JSON generation and parsing.
+http::add-handler {GET POST} /json {
+    if {$request(method) eq "POST"} {
+        set error [catch {set result [json::parse $request(formPost) 1]}]
+        if {!$error} {
+            return [http::make-response "Decoded JSON:\n[list $result]\n" \
+                    {contentType text/plain}]
+        } else {
+            return [http::error-response 400 "<p>Couldn't parse JSON.</p>"]
+        }
+    } else {
+        return [http::make-response [json::stringify [dict create {*}{
+            objectSample {Tokyo 37.8 Seoul 25.62 Shanghai 24.75}
+            arraySample {0 Tokyo 1 Seoul 2 Shanghai}
+        }] 1]]
     }
 }
 

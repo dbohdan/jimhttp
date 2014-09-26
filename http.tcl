@@ -190,10 +190,11 @@ proc http::parse-multipart-data {postString contentType newline} {
 }
 
 # Return error responses.
-proc http::error-response {code} {
+proc http::error-response {code {customMessage ""}} {
     global http::statusCodePhrases
     return [http::make-response \
-            "<h1>Error $code: $http::statusCodePhrases($code)</h1>" \
+            "<h1>Error $code: $http::statusCodePhrases($code)</h1>\
+                    $customMessage" \
             [list code $code]]
 }
 
@@ -283,6 +284,12 @@ proc http::serve {channel clientAddr clientPort routes} {
                                         $errorMessage."
                         set error 400
                     }
+                } else {
+                    # Put content of other types (e.g., application/json) into
+                    # request(formPost) as is.
+                    http::debug-message \
+                            "POST request: ($request(contentType) skipped)"
+                    dict set request formPost $postString
                 }
             } else {
                 http::debug-message \
