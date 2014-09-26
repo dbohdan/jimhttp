@@ -35,6 +35,11 @@ set http::requestFormat [dict create {*}{
     User-Agent:             userAgent
 }]
 
+set http::requestFormatLowerCase {}
+foreach {key value} $http::requestFormat {
+    dict set http::requestFormatLowerCase [string tolower $key] $value
+}
+
 set http::methods [list {*}{
     OPTIONS GET HEAD POST PUT DELETE TRACE CONNECT
 }]
@@ -115,7 +120,7 @@ proc http::string-pop {stringVarName separator} {
 
 # Parse HTTP request headers presented as a list of lines into a dict.
 proc http::parse-headers {headerLines} {
-    global http::requestFormat
+    global http::requestFormatLowerCase
     global http::methods
 
     set headers {}
@@ -133,8 +138,9 @@ proc http::parse-headers {headerLines} {
             dict set headers form [form-decode $formData]
         } else {
             # Translate "Content-Type:" to "contentType", etc.
-            if {[dict exists $http::requestFormat $field]} {
-                dict set headers $http::requestFormat($field) $value
+            set field [string tolower $field]
+            if {[dict exists $http::requestFormatLowerCase $field]} {
+                dict set headers $http::requestFormatLowerCase($field) $value
             }
         }
     }
