@@ -244,7 +244,7 @@ proc http::serve {channel clientAddr clientPort routes} {
             if {[string index $buf end] ne "\r"} {
                 set newline "\n"
                 http::log debug \
-                        {The client uses \n instead of \r\n for newline.} \
+                        {The client uses \n instead of \r\n for newline.}
             }
             set firstLine 0
         }
