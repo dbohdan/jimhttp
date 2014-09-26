@@ -127,7 +127,7 @@ if {$curlAvailable} {
         error "Can't test example: port $port taken!"
     }
 
-    exec jimsh example.tcl 0 &
+    exec jimsh example.tcl -v 0 &
     test-url $url
     test-url $url/does-not-exist
     test-url $url

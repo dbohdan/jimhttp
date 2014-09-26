@@ -7,12 +7,7 @@ source html.tcl
 source storage.tcl
 source template.tcl
 source json.tcl
-
-set http::crashOnError 1 ;# exit if an error occurs.
-set http::verbosity [lindex $argv 0]
-if {$http::verbosity eq ""} {
-    set http::verbosity 3
-}
+source arguments.tcl
 
 # This file showcases the various features of the framework and the different
 # styles in which it can be used.
@@ -179,5 +174,27 @@ http::add-handler {GET POST} /json {
 # Static file.
 http::add-static-file /static.jpg
 
-storage::init
-http::start-server 127.0.0.1 8080
+proc main {} {
+    global argv
+    global argv0
+    global http::crashOnError
+    global http::verbosity
+
+    set http::crashOnError 1 ;# exit if an error occurs.
+
+    set optionalArgs [list -p port 8080 -i ip 127.0.0.1 -v verbosity 3]
+    set error [catch {
+        set args [arguments::parse {} $optionalArgs $argv]
+    } errorMessage]
+    if {$error} {
+        puts "Error: $errorMessage"
+        puts [arguments::usage {} $optionalArgs $argv0]
+        exit 1
+    }
+    set http::verbosity $args(verbosity)
+
+    storage::init
+    http::start-server $args(ip) $args(port)
+}
+
+main

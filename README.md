@@ -30,11 +30,11 @@ http::add-handler GET /counter-persistent {{counter 0}} {
 storage::init
 http::start-server 127.0.0.1 8080
 ```
-
 # Requirements
 
 Compile the latest Jim Tcl from the Git repository. The current stable release
-(0.75) or earlier releases will not work.
+(0.75) or earlier releases will not work. You'll need an SQLite3 development
+package (`libsqlite3-dev` on Ubuntu, `libsqlite3x-devel` on Fedora).
 
 ```sh
 git clone https://github.com/msteveb/jimtcl.git
@@ -43,6 +43,17 @@ cd jimtcl
 make
 sudo make install
 ```
+
+Once you've installed Jim Tcl you can clone this repository and try out the
+example by running
+
+```sh
+git clone https://github.com/dbohdan/jimhttp.git
+cd jimhttp
+jimsh example.tcl
+```
+
+then pointing your web browser at <http://localhost:8080/>.
 
 # License
 
