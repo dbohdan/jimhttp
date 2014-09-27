@@ -34,7 +34,7 @@ http::start-server 127.0.0.1 8080
 
 Compile the latest Jim Tcl from the Git repository. The current stable release
 (0.75) or earlier releases will not work. You'll need an SQLite3 development
-package (`libsqlite3-dev` on Ubuntu, `libsqlite3x-devel` on Fedora).
+package (`libsqlite3-dev` on Debian/Ubuntu, `libsqlite3x-devel` on Fedora).
 
 ```sh
 git clone https://github.com/msteveb/jimtcl.git
@@ -54,6 +54,35 @@ jimsh example.tcl
 ```
 
 then pointing your web browser at <http://localhost:8080/>.
+
+## Vagrant
+
+You can have the development environment set up for you automatically if you've
+got VirtualBox and [Vagrant](https://www.vagrantup.com/downloads.html)
+installed.
+
+Run the following commands in the terminal:
+
+```sh
+git clone https://github.com/dbohdan/jimhttp.git
+cd jimhttp/vagrant
+vagrant box add ubuntu/trusty64
+vagrant up
+```
+
+and open <http://localhost:8080/>. Go to <http://localhost:8080/quit> to restart
+the server when you edit `example.tcl`.
+
+Stop the VM with
+
+    ^C
+    ^C
+    vagrant halt
+
+Run the server again with
+
+    vagrant up
+    vagrant provision
 
 # License
 

@@ -180,6 +180,8 @@ proc main {} {
     global http::crashOnError
     global http::verbosity
 
+    stdout buffering line
+
     set http::crashOnError 1 ;# exit if an error occurs.
 
     set optionalArgs [list -p port 8080 -i ip 127.0.0.1 -v verbosity 3]
