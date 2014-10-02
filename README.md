@@ -44,7 +44,7 @@ make
 sudo make install
 ```
 
-Once you've installed Jim Tcl you can clone this repository and try out the
+Once you have installed Jim Tcl you can clone this repository and try out the
 example by running
 
 ```sh
@@ -57,8 +57,8 @@ then pointing your web browser at <http://localhost:8080/>.
 
 ## Vagrant
 
-You can have the development environment set up for you automatically if you've
-got VirtualBox and [Vagrant](https://www.vagrantup.com/downloads.html)
+The development environment can be set up for you automatically if you
+have VirtualBox and [Vagrant](https://www.vagrantup.com/downloads.html)
 installed.
 
 Run the following commands in the terminal:

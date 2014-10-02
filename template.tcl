@@ -1,9 +1,9 @@
-# A templating engine.
+# Templating engine.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
 # Convert a template into Tcl code.
-proc template::parse {template} {
+proc ::template::parse {template} {
     set result {}
     set regExpr {^(.*?)<%(.*?)%>(.*)$}
     set listing "set _output {}\n"

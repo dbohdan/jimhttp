@@ -3,11 +3,11 @@
 # License: MIT
 source mime.tcl
 
-set http::verbosity 0
-set http::crashOnError 0
-set http::maxRequestLength [expr 16*1024*1024]
+set ::http::verbosity 0
+set ::http::crashOnError 0
+set ::http::maxRequestLength [expr 16*1024*1024]
 
-set http::statusCodePhrases [dict create {*}{
+set ::http::statusCodePhrases [dict create {*}{
     100 Continue
     200 OK
     201 {Created}
@@ -21,7 +21,7 @@ set http::statusCodePhrases [dict create {*}{
     500 {Internal Server Error}
 }]
 
-set http::requestFormat [dict create {*}{
+set ::http::requestFormat [dict create {*}{
     Accept:                 accept
     Accept-Charset:         acceptCharset
     Accept-Encoding:        acceptEncoding
@@ -36,54 +36,54 @@ set http::requestFormat [dict create {*}{
     User-Agent:             userAgent
 }]
 
-set http::requestFormatLowerCase {}
-foreach {key value} $http::requestFormat {
-    dict set http::requestFormatLowerCase [string tolower $key] $value
+set ::http::requestFormatLowerCase {}
+foreach {key value} $::http::requestFormat {
+    dict set ::http::requestFormatLowerCase [string tolower $key] $value
 }
 
-set http::methods [list {*}{
+set ::http::methods [list {*}{
     OPTIONS GET HEAD POST PUT DELETE TRACE CONNECT
 }]
 
 # Return the text of an HTTP response with body $body.
-proc http::make-response {body {headers {}}} {
-    global http::statusCodePhrases
+proc ::http::make-response {body {headers {}}} {
+    global ::http::statusCodePhrases
 
-    set http::responseTemplate \
-        {HTTP/1.1 $headers(code) $http::statusCodePhrases($headers(code))
+    set ::http::responseTemplate \
+        {HTTP/1.1 $headers(code) $::http::statusCodePhrases($headers(code))
 Content-Type: $headers(contentType)
 Content-Length: $length
 
 $body}
 
-    set http::headerDefaults [dict create {*}{
+    set ::http::headerDefaults [dict create {*}{
         code 200
         contentType text/html
     }]
 
-    set headers [dict merge $http::headerDefaults $headers]
+    set headers [dict merge $::http::headerDefaults $headers]
     set length [string bytelength $body]
 
-    set response [subst $http::responseTemplate]
+    set response [subst $::http::responseTemplate]
     return $response
 }
 
-# Write $message to stdout if $level <= $http::verbosity. Levels 0 are lower is
+# Write $message to stdout if $level <= $::http::verbosity. Levels 0 are lower is
 # for errors that are always reported.
-proc http::log {level message} \
+proc ::http::log {level message} \
         [list [list levelNumber [dict create {*}{
             debug 3 info 2 warning 1 error 0 critical -1
         }]]] {
-    global http::verbosity
+    global ::http::verbosity
     set levelNumber
 
-    if {$levelNumber($level) <= $http::verbosity} {
+    if {$levelNumber($level) <= $::http::verbosity} {
         puts [format "%-9s %s" "[string toupper $level]:" $message]
     }
 }
 
 # From http://wiki.tcl.tk/14144.
-proc http::uri-decode str {
+proc ::http::uri-decode str {
     # rewrite "+" back to space
     # protect \ from quoting another '\'
     set str [string map [list + { } "\\" "\\\\"] $str]
@@ -97,7 +97,7 @@ proc http::uri-decode str {
 
 # Decode a POST/GET form.
 # string -> dict
-proc http::form-decode {formData} {
+proc ::http::form-decode {formData} {
     set result {}
     foreach x [split $formData &] {
         lassign [lmap y [split $x =] { uri-decode $y }] key value
@@ -110,7 +110,7 @@ proc http::form-decode {formData} {
 # $stringVarName. Remove this content and the separator following it from the
 # $stringVarName. If $separator isn't in $stringVarName's value return the whole
 # string.
-proc http::string-pop {stringVarName separator} {
+proc ::http::string-pop {stringVarName separator} {
     upvar 1 $stringVarName str
     set substrLength [string first $separator $str]
     if {$substrLength > -1} {
@@ -124,9 +124,9 @@ proc http::string-pop {stringVarName separator} {
 }
 
 # Parse HTTP request headers presented as a list of lines into a dict.
-proc http::parse-headers {headerLines} {
-    global http::requestFormatLowerCase
-    global http::methods
+proc ::http::parse-headers {headerLines} {
+    global ::http::requestFormatLowerCase
+    global ::http::methods
 
     set headers {}
     set field {}
@@ -135,17 +135,17 @@ proc http::parse-headers {headerLines} {
     foreach line $headerLines {
         # Split $line on its first space.
         regexp {^(.*?) (.*)$} $line _ field value
-        http::log debug [list $line]
+        ::http::log debug [list $line]
 
-        if {[lsearch -exact $http::methods $field] > -1} {
+        if {[lsearch -exact $::http::methods $field] > -1} {
             dict set headers method $field
             lassign [split [lindex [split $value] 0] ?] headers(url) formData
             dict set headers form [form-decode $formData]
         } else {
             # Translate "Content-Type:" to "contentType", etc.
             set field [string tolower $field]
-            if {[dict exists $http::requestFormatLowerCase $field]} {
-                dict set headers $http::requestFormatLowerCase($field) $value
+            if {[dict exists $::http::requestFormatLowerCase $field]} {
+                dict set headers $::http::requestFormatLowerCase($field) $value
             }
         }
     }
@@ -154,7 +154,7 @@ proc http::parse-headers {headerLines} {
 
 # Convert an HTTP request value of type {string;key1=value1; key2="value2"} to
 # dict.
-proc http::parse-value {str} {
+proc ::http::parse-value {str} {
     set result {}
     foreach x [split $str ";"] {
         set x [string trimleft $x " "] ;# For "; ".
@@ -169,20 +169,20 @@ proc http::parse-value {str} {
 
 # Return the files and formPost fields in encoded in a multipart/form-data form.
 # Very hacky.
-proc http::parse-multipart-data {postString contentType newline} {
+proc ::http::parse-multipart-data {postString contentType newline} {
     set result {}
     if {[catch {set boundary [dict get \
-            [http::parse-value $contentType] boundary]}]} {
+            [::http::parse-value $contentType] boundary]}]} {
         error {no boundary specified in Content-Type}
     }
     set boundaryLength [string length $boundary]
     while {[set part [string-pop postString $boundary]] ne ""} {
-        set partHeader [http::parse-headers \
+        set partHeader [::http::parse-headers \
                 [split [string-pop part "$newline$newline"] $newline]]
         # Trim "(\r)\n--" in content.
         set part [string range $part 0 end-[string length "$newline--"]]
         if {$part ne ""} {
-            set m [http::parse-value $partHeader(contentDisposition)]
+            set m [::http::parse-value $partHeader(contentDisposition)]
             if {[dict exists $m form-data] &&
                         [dict exists $m name]} {
                 # Store files and form fields separately.
@@ -201,26 +201,26 @@ proc http::parse-multipart-data {postString contentType newline} {
 }
 
 # Return error responses.
-proc http::error-response {code {customMessage ""}} {
-    global http::statusCodePhrases
-    return [http::make-response \
-            "<h1>Error $code: $http::statusCodePhrases($code)</h1>\
+proc ::http::error-response {code {customMessage ""}} {
+    global ::http::statusCodePhrases
+    return [::http::make-response \
+            "<h1>Error $code: $::http::statusCodePhrases($code)</h1>\
                     $customMessage" \
             [list code $code]]
 }
 
-# Call http::serve. Catch and report any unhandled errors.
-proc http::serve-and-trap-errors {channel clientAddr clientPort routes} {
+# Call ::http::serve. Catch and report any unhandled errors.
+proc ::http::serve-and-trap-errors {channel clientAddr clientPort routes} {
     set error [catch {
-        http::serve $channel $clientAddr $clientPort $routes
+        ::http::serve $channel $clientAddr $clientPort $routes
     } errorMessage]
     if {$error} {
-        http::log critical \
-                "Unhandled http::serve error: $errorMessage."
+        ::http::log critical \
+                "Unhandled ::http::serve error: $errorMessage."
         catch {close $channel}
-        global http::crashOnError
-        if {$http::crashOnError} {
-            http::log info "Exiting due to error."
+        global ::http::crashOnError
+        if {$::http::crashOnError} {
+            ::http::log info "Exiting due to error."
             exit 1
         }
     }
@@ -228,10 +228,10 @@ proc http::serve-and-trap-errors {channel clientAddr clientPort routes} {
 
 # Handle HTTP requests over a channel and send responses. A hacky HTTP
 # implementation.
-proc http::serve {channel clientAddr clientPort routes} {
-    global http::maxRequestLength
+proc ::http::serve {channel clientAddr clientPort routes} {
+    global ::http::maxRequestLength
 
-    http::log info "Client connected: $clientAddr"
+    ::http::log info "Client connected: $clientAddr"
 
     set newline \r\n
 
@@ -243,7 +243,7 @@ proc http::serve {channel clientAddr clientPort routes} {
             # nonstandard \n newlines. This happens, e.g., when you use netcat.
             if {[string index $buf end] ne "\r"} {
                 set newline "\n"
-                http::log debug \
+                ::http::log debug \
                         {The client uses \n instead of \r\n for newline.}
             }
             set firstLine 0
@@ -257,11 +257,11 @@ proc http::serve {channel clientAddr clientPort routes} {
         lappend headerLines $buf
     }
 
-    set request [http::parse-headers $headerLines]
+    set request [::http::parse-headers $headerLines]
     set error 0
 
     if {(![dict exists $request method]) || (![dict exists $request url])} {
-        http::log error "Bad request."
+        ::http::log error "Bad request."
         set error 400
     }
 
@@ -272,7 +272,7 @@ proc http::serve {channel clientAddr clientPort routes} {
 
         if {[string is integer $request(contentLength)] &&
                 ($request(contentLength) > 0)} {
-            if {$request(contentLength) <= $http::maxRequestLength} {
+            if {$request(contentLength) <= $::http::maxRequestLength} {
                 if {[dict exists $request expect] &&
                             ($request(expect) eq "100-continue")} {
                     puts $channel "HTTP/1.1 100 Continue\n"
@@ -281,22 +281,22 @@ proc http::serve {channel clientAddr clientPort routes} {
                 set postString [read $channel $request(contentLength)]
                 if {$request(contentType) eq
                         "application/x-www-form-urlencoded"} {
-                    http::log debug "POST request: {$postString}\n"
+                    ::http::log debug "POST request: {$postString}\n"
                     dict set request formPost [form-decode $postString]
                 } elseif {[string match "multipart/form-data*" \
                         $request(contentType)]} {
-                    http::log debug \
+                    ::http::log debug \
                             "POST request: (multipart/form-data skipped)"
-                    # Call http::parse-multipart-data to parse the data.
+                    # Call ::http::parse-multipart-data to parse the data.
                     set multipartDataError [catch {
                         set request [dict merge $request \
-                                [http::parse-multipart-data \
+                                [::http::parse-multipart-data \
                                         $postString \
                                         $request(contentType) \
                                         $newline]]
                     } errorMessage]
                     if {$multipartDataError} {
-                        http::log error \
+                        ::http::log error \
                                 "Bad request: multipart/form-data parse error:\
                                         $errorMessage."
                         set error 400
@@ -304,17 +304,17 @@ proc http::serve {channel clientAddr clientPort routes} {
                 } else {
                     # Put content of other types (e.g., application/json) into
                     # request(formPost) as is.
-                    http::log debug \
+                    ::http::log debug \
                             "POST request: ($request(contentType) skipped)"
                     dict set request formPost $postString
                 }
             } else {
-                http::log error \
+                ::http::log error \
                         "Request too large: $request(contentLength)."
                 set error 413
             }
         } else {
-            http::log error "Bad request: Content-Length is invalid\
+            ::http::log error "Bad request: Content-Length is invalid\
                     (\"$request(contentLength)\")."
             set error 400
         }
@@ -323,42 +323,42 @@ proc http::serve {channel clientAddr clientPort routes} {
     }
 
     if {!$error} {
-        http::log info "Responding."
-        puts -nonewline $channel [http::route $request $routes]
+        ::http::log info "Responding."
+        puts -nonewline $channel [::http::route $request $routes]
     } else {
-        puts -nonewline $channel [http::error-response $error]
+        puts -nonewline $channel [::http::error-response $error]
     }
 
     close $channel
 }
 
 # Start the HTTP server binding it to $ipAddress and $port.
-proc http::start-server {ipAddress port} {
-    global http::serverSocket
-    global http::done
+proc ::http::start-server {ipAddress port} {
+    global ::http::serverSocket
+    global ::http::done
 
-    set http::serverSocket [socket stream.server $ipAddress:$port]
-    $http::serverSocket readable {
-        set client [$http::serverSocket accept addr]
-        http::serve-and-trap-errors $client {*}[split $addr :] $http::routes
+    set ::http::serverSocket [socket stream.server $ipAddress:$port]
+    $::http::serverSocket readable {
+        set client [$::http::serverSocket accept addr]
+        ::http::serve-and-trap-errors $client {*}[split $addr :] $::http::routes
     }
-    http::log info "Started server on $ipAddress:$port."
-    vwait http::done
-    http::log info "The server has shut down."
+    ::http::log info "Started server on $ipAddress:$port."
+    vwait ::http::done
+    ::http::log info "The server has shut down."
 }
 
 # Call route handler for the request url if available and return its result.
 # Otherwise return a 404 error message.
-proc http::route {request routes} {
+proc ::http::route {request routes} {
     # Don't show the contents of large files in the debug message.
     if {[dict exists $request files] &&
                 [string length $request(files)] > 8*1024} {
         set requestPrime $request
         dict set requestPrime files "(not shown here)"
-        http::log debug "request: $requestPrime"
+        ::http::log debug "request: $requestPrime"
         set requestPrime {}
     } else {
-        http::log debug "request: $request"
+        ::http::log debug "request: $request"
     }
 
     set url [dict get $request url]
@@ -366,20 +366,20 @@ proc http::route {request routes} {
         set url /
     }
 
-    set matchResult [http::match-route \
+    set matchResult [::http::match-route \
             [dict keys $routes($request(method))] $url]
     if {$matchResult != 0} {
         set procName [dict get $routes $request(method) [lindex $matchResult 0]]
         set result [$procName $request [lindex $matchResult 1]]
         return $result
     } else {
-        return [http::error-response 404]
+        return [::http::error-response 404]
     }
 }
 
 # Return route variables contained in the url if it can be parsed as route
 # $route. Return 0 otherwise.
-proc http::get-route-variables {route url} {
+proc ::http::get-route-variables {route url} {
     set routeVars {}
     foreach routeSegment [split $route /] urlSegment [split $url /] {
         if {[string index $routeSegment 0] eq ":"} {
@@ -395,9 +395,9 @@ proc http::get-route-variables {route url} {
 }
 
 # Return the first route out of the list $routeList that matches $url.
-proc http::match-route {routeList url} {
+proc ::http::match-route {routeList url} {
     foreach route $routeList {
-        set routeVars [http::get-route-variables $route $url]
+        set routeVars [::http::get-route-variables $route $url]
         if {$routeVars != 0} {
             return [list $route $routeVars]
         }
@@ -406,20 +406,20 @@ proc http::match-route {routeList url} {
 }
 
 # Create a proc to handle the route $route with body $script.
-proc http::add-handler {methods routes {statics {}} script} {
-    global http::routes
+proc ::http::add-handler {methods routes {statics {}} script} {
+    global ::http::routes
 
     set procName "handler::${methods}::${routes}"
     proc $procName {request routeVars} $statics $script
     foreach method $methods {
         foreach route $routes {
-            dict set http::routes $method $route $procName
+            dict set ::http::routes $method $route $procName
         }
     }
 }
 
 # Return the contents of $filename.
-proc http::read-file {filename} {
+proc ::http::read-file {filename} {
     set fpvar [open $filename r]
     fconfigure $fpvar -translation binary
     set content [read $fpvar]
@@ -429,11 +429,11 @@ proc http::read-file {filename} {
 
 # Add handler to return the contents of a static file. The file is either
 # $filename or [file tail $route] if no filename is given.
-proc http::add-static-file {route {filename {}}} {
+proc ::http::add-static-file {route {filename {}}} {
     if {$filename eq ""} {
         set filename [file tail $route]
     }
-    http::add-handler GET $route [format {
-        http::make-response [http::read-file %s] {contentType %s}
-    } $filename [mime::type $filename]]
+    ::http::add-handler GET $route [format {
+        ::http::make-response [::http::read-file %s] {contentType %s}
+    } $filename [::mime::type $filename]]
 }

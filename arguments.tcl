@@ -5,7 +5,7 @@
 # Return a dict mapping varNames to command line argument values.
 # mandatoryArguments: a list {-arg varName ...}
 # optionalArguments: a dict {-optArg varName defaultValue ...}
-proc arguments::parse {mandatoryArguments optionalArguments argv} {
+proc ::arguments::parse {mandatoryArguments optionalArguments argv} {
     set result {}
     set error [catch {
         foreach {argument key defaultValue} $optionalArguments {
@@ -35,7 +35,7 @@ proc arguments::parse {mandatoryArguments optionalArguments argv} {
 }
 
 # Return a usage message.
-proc arguments::usage {mandatoryArguments optionalArguments argv0} {
+proc ::arguments::usage {mandatoryArguments optionalArguments argv0} {
     set result {}
     append result "usage: $argv0"
     foreach {argument key} $mandatoryArguments {

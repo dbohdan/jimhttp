@@ -1,5 +1,5 @@
 #!/usr/bin/env jimsh
-# An HTTP server and web framework for Jim Tcl.
+# Tests for the web framework and its modules.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
 
@@ -25,34 +25,36 @@ proc assert-all-equal args {
 source http.tcl
 
 assert-all-equal \
-        [http::get-route-variables \
+        [::http::get-route-variables \
                 {/hello/:name/:town} {/hello/john/smallville}] \
-        [http::get-route-variables \
+        [::http::get-route-variables \
                 {/hello/:name/:town} {/hello/john/smallville/}] \
-        [http::get-route-variables \
+        [::http::get-route-variables \
                 {/hello/there/:name/:town} {/hello/there/john/smallville/}] \
-        [http::get-route-variables \
+        [::http::get-route-variables \
                 {/hello/:name/from/:town} {/hello/john/from/smallville/}]
 
 assert-all-equal \
-        [http::get-route-variables \
+        [::http::get-route-variables \
                 {/bye/:name/:town} {/hello/john/smallville/}] \
         0
 
-assert-all-equal [http::form-decode a=b&c=d] [dict create {*}{
+assert-all-equal [::http::form-decode a=b&c=d] [dict create {*}{
     a b c d
 }]
 
-assert-all-equal [http::form-decode message=Hello%2C+world%21] [dict create {*}{
-    message {Hello, world!}
-}]
+assert-all-equal \
+        [::http::form-decode message=Hello%2C+world%21] \
+        [dict create {*}{
+            message {Hello, world!}
+        }]
 
 
 # html tests
 source html.tcl
 
 foreach t {{!@#$%^&*()_+} {<b>Hello!</b>}} {
-    assert-all-equal [html::unescape [html::escape $t]] $t
+    assert-all-equal [::html::unescape [html::escape $t]] $t
 }
 
 assert-all-equal [b "Hello!"] [b "" "Hello!"] {<b>Hello!</b>}
@@ -67,54 +69,68 @@ set d [dict create {*}{
     object {Tokyo 37.8 Seoul 25.62 Shanghai 24.75}
 }]
 
-assert-all-equal [json::decode-string {"ab\nc\"de"}] [list "ab\nc\"de" {}]
-assert-all-equal [json::decode-string {"a" b c}] [list "a" { b c}]
+assert-all-equal [::json::decode-string {"ab\nc\"de"}] [list "ab\nc\"de" {}]
+assert-all-equal [::json::decode-string {"a" b c}] [list "a" { b c}]
 
-assert-all-equal [json::decode-number {0}] [list 0 {}]
-assert-all-equal [json::decode-number {0.}] [list 0. {}]
-assert-all-equal [json::decode-number {-0.1234567890}] [list -0.1234567890 {}]
-assert-all-equal [json::decode-number {-525}] [list -525 {}]
-assert-all-equal [json::decode-number {1E100}] [list 1E100 {}]
-assert-all-equal [json::decode-number {1.23e-99}] [list 1.23e-99 {}]
-assert-all-equal [json::decode-number {1.23e-99, 0, 0}] [list 1.23e-99 {, 0, 0}]
+assert-all-equal [::json::decode-number {0}] [list 0 {}]
+assert-all-equal [::json::decode-number {0.}] [list 0. {}]
+assert-all-equal [::json::decode-number {-0.1234567890}] [list -0.1234567890 {}]
+assert-all-equal [::json::decode-number {-525}] [list -525 {}]
+assert-all-equal [::json::decode-number {1E100}] [list 1E100 {}]
+assert-all-equal [::json::decode-number {1.23e-99}] [list 1.23e-99 {}]
+assert-all-equal [::json::decode-number {1.23e-99, 0, 0}] \
+        [list 1.23e-99 {, 0, 0}]
 
-assert-all-equal [json::decode-array {[1.23e-99, 0, 0]}] \
+assert-all-equal [::json::decode-array {[1.23e-99, 0, 0]}] \
         [list {1.23e-99 0 0} {}]
-assert-all-equal [json::decode-array {[ 1.23e-99,    0,     0 ]}] \
+assert-all-equal [::json::decode-array {[ 1.23e-99,    0,     0 ]}] \
         [list {1.23e-99 0 0} {}]
-assert-all-equal [json::decode-array {[1.23e-99, "a", [1,2,3]]}] \
+assert-all-equal [::json::decode-array {[1.23e-99, "a", [1,2,3]]}] \
         [list {1.23e-99 a {1 2 3}} {}]
-assert-all-equal [json::decode-array {["alpha", "beta", "gamma"]} 0] \
+assert-all-equal [::json::decode-array {["alpha", "beta", "gamma"]} 0] \
         [list {alpha beta gamma} {}]
-assert-all-equal [json::decode-array {["alpha", "beta", "gamma"]} 1] \
+assert-all-equal [::json::decode-array {["alpha", "beta", "gamma"]} 1] \
         [list {0 alpha 1 beta 2 gamma} {}]
 
-assert-all-equal [json::decode-object {{"key": "value"}}] \
+assert-all-equal [::json::decode-object {{"key": "value"}}] \
         [list {key value} {}]
-assert-all-equal [json::decode-object {{    "key"   :        "value"    }}] \
+assert-all-equal [::json::decode-object {{    "key"   :        "value"    }}] \
         [list {key value} {}]
-assert-all-equal [json::decode-object {{"key": [1, 2, 3]}}] \
+assert-all-equal [::json::decode-object {{"key": [1, 2, 3]}}] \
         [list {key {1 2 3}} {}]
 
-assert-all-equal [json::parse [json::stringify $d 1] 1] $d
+assert-all-equal [::json::parse [::json::stringify $d 1] 1] $d
 
-assert-all-equal [json::stringify 0] 0
-assert-all-equal [json::stringify 0.5] 0.5
-assert-all-equal [json::stringify Hello] {"Hello"}
-assert-all-equal [json::stringify {key value}] {{"key": "value"}}
+assert-all-equal [::json::stringify 0] 0
+assert-all-equal [::json::stringify 0.5] 0.5
+assert-all-equal [::json::stringify Hello] {"Hello"}
+assert-all-equal [::json::stringify {key value}] {{"key": "value"}}
 assert-all-equal \
-        [json::stringify {0 a 1 b 2 c} 0] \
+        [::json::stringify {0 a 1 b 2 c} 0] \
         {{"0": "a", "1": "b", "2": "c"}}
 assert-all-equal \
-        [json::stringify {0 a 1 b 2 c} 1] \
+        [::json::stringify {0 a 1 b 2 c} 1] \
         {["a", "b", "c"]}
 
 # Invalid JSON.
-assert [catch {[json::parse x]}]
+assert [catch {[::json::parse x]}]
 # Trailing garbage.
-assert [catch {[json::parse {"Hello" blah}]}]
+assert [catch {[::json::parse {"Hello" blah}]}]
 
-# example web server and http tests
+
+# arguments tests
+source arguments.tcl
+
+assert-all-equal \
+        [::arguments::parse {-a first} {-b second 2 -c third blah} {-a 1 -c 3}]\
+        [dict create {*}{first 1 second 2 third 3}]
+assert-all-equal \
+        [::arguments::usage {-a first} {-b second 2 -c third blah} \
+                "./sample.tcl"] \
+        {usage: ./sample.tcl -a first [-b second] [-c third]}
+
+
+# example web application (example.tcl) and http tests
 set curlAvailable [expr {![catch {exec curl -V}]}]
 if {$curlAvailable} {
     proc test-url args {
@@ -138,8 +154,8 @@ if {$curlAvailable} {
     exec dd if=/dev/urandom of=$tempFile1 bs=1024 count=1024
     exec curl -o "$tempFile2" -X POST -F "testfile=@$tempFile1" \
             $url/file-echo
-    set fileContents1 [http::read-file $tempFile1]
-    set fileContents2 [http::read-file $tempFile2]
+    set fileContents1 [::http::read-file $tempFile1]
+    set fileContents2 [::http::read-file $tempFile2]
 
     assert [list \
         [string bytelength $fileContents1] == \
