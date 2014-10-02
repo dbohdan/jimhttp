@@ -33,7 +33,7 @@ http::start-server 127.0.0.1 8080
 # Requirements
 
 Compile the latest Jim Tcl from the Git repository. The current stable release
-(0.75) or earlier releases will not work. You'll need an SQLite3 development
+(0.75) or earlier releases will not work. You will need an SQLite3 development
 package (`libsqlite3-dev` on Debian/Ubuntu, `libsqlite3x-devel` on Fedora).
 
 ```sh

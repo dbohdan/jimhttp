@@ -3,10 +3,10 @@
 # License: MIT
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
-# numberDicts: decode arrays as dictionaries with sequential integers starting
-# with zero as keys; otherwise decode them as lists.
-proc ::json::parse {str {numberDicts 0}} {
-    set result [::json::decode-value $str $numberDicts]
+# numberDictArrays: decode arrays as dictionaries with sequential integers
+# starting with zero as keys; otherwise decode them as lists.
+proc ::json::parse {str {numberDictArrays 0}} {
+    set result [::json::decode-value $str $numberDictArrays]
     if {[lindex $result 1] eq ""} {
         return [lindex $result 0]
     } else {
@@ -15,9 +15,9 @@ proc ::json::parse {str {numberDicts 0}} {
 }
 
 # Serialize nested Tcl dictionaries as JSON.
-# numberDicts: encode dictionaries with keys {0 1 2 3 ...} as arrays, e.g.,
-# {0 a 1 b} to ["a", "b"].
-proc ::json::stringify {dictionaryOrValue {numberDicts 1}} {
+# numberDictArrays: encode dictionaries with keys {0 1 2 3 ...} as arrays,
+# e.g., {0 a 1 b} to ["a", "b"].
+proc ::json::stringify {dictionaryOrValue {numberDictArrays 1}} {
     set result {}
     if {[llength $dictionaryOrValue] <= 1} {
         if {[string is integer $dictionaryOrValue] || \
@@ -32,7 +32,7 @@ proc ::json::stringify {dictionaryOrValue {numberDicts 1}} {
         # Dict.
         set allNumeric 1
 
-        if {$numberDicts} {
+        if {$numberDictArrays} {
             set values {}
             set i 0
             foreach {key value} $dictionaryOrValue {
@@ -45,17 +45,17 @@ proc ::json::stringify {dictionaryOrValue {numberDicts 1}} {
             }
         }
 
-        if {$numberDicts && $allNumeric} {
+        if {$numberDictArrays && $allNumeric} {
             # Produce array.
             set arrayElements \
-                    [lmap x $values {::json::stringify $x $numberDicts}]
+                    [lmap x $values {::json::stringify $x $numberDictArrays}]
             set result "\[[join $arrayElements {, }]\]"
         } else {
             # Produce object.
             set objectDict {}
             foreach {key value} $dictionaryOrValue {
                 lappend objectDict "\"$key\": [::json::stringify \
-                        $value $numberDicts]"
+                        $value $numberDictArrays]"
             }
             set result "{[join $objectDict {, }]}"
         }
@@ -66,7 +66,7 @@ proc ::json::stringify {dictionaryOrValue {numberDicts 1}} {
 # Choose how to decode a JSON value. Return a list consisting of the result of
 # parsing the initial part of $str and the remainder of $str that was not
 # parsed. E.g., ::json::decode-value {"string", 55} returns {{string} {, 55}}.
-proc ::json::decode-value {str {numberDicts 0}} {
+proc ::json::decode-value {str {numberDictArrays 0}} {
     set str [string trimleft $str]
     switch -regexp -- $str {
         {^\".*} {
@@ -76,10 +76,10 @@ proc ::json::decode-value {str {numberDicts 0}} {
             return [::json::decode-number $str]
         }
         {^\{.*} {
-            return [::json::decode-object $str $numberDicts]
+            return [::json::decode-object $str $numberDictArrays]
         }
         {^\[.*} {
-            return [::json::decode-array $str $numberDicts]
+            return [::json::decode-array $str $numberDictArrays]
         }
         {^(true|false|null)} {
             return [list $str {}]
@@ -119,11 +119,11 @@ proc ::json::decode-number {str} {
 
 # Return a list of two elements: the initial part of $str parsed as a JSON array
 # and the remainder of $str that wasn't parsed. Arrays are parsed into
-# dictionaries with numbers {0 1 2 ...} as keys if $numberDicts is true or lists
-# if it is false. E.g., if $numberDicts == 1 then ["Hello, World" 2048] is
-# converted to {0 {Hello, World!} 1 2048}; otherwise it is converted to
-# {{Hello, World!} 2048}.
-proc ::json::decode-array {str {numberDicts 0}} {
+# dictionaries with numbers {0 1 2 ...} as keys if $numberDictArrays is true
+# or lists if it is false. E.g., if $numberDictArrays == 1 then
+# ["Hello, World" 2048] is converted to {0 {Hello, World!} 1 2048}; otherwise
+# it is converted to {{Hello, World!} 2048}.
+proc ::json::decode-array {str {numberDictArrays 0}} {
     set strInitial $str
     set result {}
     set value {}
@@ -135,9 +135,9 @@ proc ::json::decode-array {str {numberDicts 0}} {
     }
     while 1 {
         # Value.
-        lassign [::json::decode-value $str] value str
+        lassign [::json::decode-value $str $numberDictArrays] value str
         set str [string trimleft $str]
-        if {$numberDicts} {
+        if {$numberDictArrays} {
             lappend result $i
         }
         lappend result $value
@@ -157,7 +157,7 @@ proc ::json::decode-array {str {numberDicts 0}} {
 
 # Return a list of two elements: the initial part of $str parsed as a JSON
 # object and the remainder of $str that wasn't parsed.
-proc ::json::decode-object {str {numberDicts 0}} {
+proc ::json::decode-object {str {numberDictArrays 0}} {
     set strInitial $str
     set result {}
     set value {}
@@ -181,7 +181,7 @@ proc ::json::decode-object {str {numberDicts 0}} {
         }
 
         # Value.
-        lassign [::json::decode-value $str $numberDicts] value str
+        lassign [::json::decode-value $str $numberDictArrays] value str
         set str [string trimleft $str]
         lappend result $value
 
