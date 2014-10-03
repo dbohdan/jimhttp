@@ -24,6 +24,7 @@ source arguments.tcl
                     [input {type submit}]] [br] \n \
                 [ul {} \
                     [li [a {href "/ajax"} /ajax]] \n \
+                    [li [a {href "/cookie"} /cookie]] \n \
                     [li [a {href "/counter"} /counter]] \n \
                     [li [a {href "/counter-persistent"} \
                             /counter-persistent]] \n \
@@ -172,6 +173,25 @@ source arguments.tcl
         }] 1]]
     }
 }
+
+# Cookies.
+::http::add-handler GET /cookie {
+    set cookies {}
+    catch {set cookies [dict get $request cookies]}
+
+    set cookieTable [tr "" [th name] [th value]]
+    foreach {name value} $cookies {
+        append cookieTable [tr "" [td $name] [td $value]]
+    }
+
+    return [::http::make-response [html [body [table $cookieTable]]] {
+        cookies {
+            {name alpha value {cookie 1} maxAge 360}
+            {name beta value {cookie 2} expires 1727946435 httpOnly 1}
+        }
+    }]
+}
+
 
 # Static file.
 ::http::add-static-file /static.jpg

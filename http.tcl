@@ -30,11 +30,23 @@ set ::http::requestFormat [dict create {*}{
     Content-Disposition:    contentDisposition
     Content-Length:         contentLength
     Content-Type:           contentType
+    Cookie:                 cookie
     Expect:                 expect
     Host:                   host
     Referer:                referer
     User-Agent:             userAgent
 }]
+
+set ::http::cookieFields [dict create {*}{
+    Domain                  domain
+    Path                    path
+    Expires                 expires
+    Max-Age                 maxAge
+    Secure                  secure
+    HttpOnly                httpOnly
+}]
+set ::http::cookieFieldsInv [lreverse $::http::cookieFields]
+set ::http::cookieDateFormat {%a, %d-%b-%Y %H:%M:%S GMT}
 
 set ::http::requestFormatLowerCase {}
 foreach {key value} $::http::requestFormat {
@@ -52,9 +64,7 @@ proc ::http::make-response {body {headers {}}} {
     set ::http::responseTemplate \
         {HTTP/1.1 $headers(code) $::http::statusCodePhrases($headers(code))
 Content-Type: $headers(contentType)
-Content-Length: $length
-
-$body}
+Content-Length: $length}
 
     set ::http::headerDefaults [dict create {*}{
         code 200
@@ -65,11 +75,17 @@ $body}
     set length [string bytelength $body]
 
     set response [subst $::http::responseTemplate]
+    if {[dict exists $headers cookies]} {
+        foreach cookie $headers(cookies) {
+            append response "\nSet-Cookie: [::http::make-cookie $cookie]"
+        }
+    }
+    append response "\n\n$body"
     return $response
 }
 
-# Write $message to stdout if $level <= $::http::verbosity. Levels 0 are lower is
-# for errors that are always reported.
+# Write $message to stdout if $level <= $::http::verbosity. Levels 0 and lower
+# are for errors that are always reported.
 proc ::http::log {level message} \
         [list [list levelNumber [dict create {*}{
             debug 3 info 2 warning 1 error 0 critical -1
@@ -123,6 +139,37 @@ proc ::http::string-pop {stringVarName separator} {
     return $substr
 }
 
+# Parse a cookie dict in the format of
+# {{name somecookie value "some value" expires 1727946435 domain foo path /
+# secure 0 httpOnly 1} ...} into an HTTP header Set-Cookie value.
+proc ::http::make-cookie cookieDict {
+    global ::http::cookieFieldsInv
+    global ::http::cookieDateFormat
+
+    set result {}
+    append result "$cookieDict(name)=$cookieDict(value)"
+    dict unset cookieDict name
+    dict unset cookieDict value
+    foreach {field value} $cookieDict {
+        if {($field eq "secure") || ($field eq "httpOnly")} {
+            if {$value} {
+                append result "; $::http::cookieFieldsInv($field)"
+            }
+        } else {
+            append result "; $::http::cookieFieldsInv($field)"
+            if {$field eq "expires"} {
+                # TODO: adjust for the local timezone. clock format does not yet
+                # support the -gmt switch in Jim Tcl.
+                append result "=[clock format $value \
+                        -format $::http::cookieDateFormat]"
+            } else {
+                append result "=$value"
+            }
+        }
+    }
+    return $result
+}
+
 # Parse HTTP request headers presented as a list of lines into a dict.
 proc ::http::parse-headers {headerLines} {
     global ::http::requestFormatLowerCase
@@ -144,7 +191,13 @@ proc ::http::parse-headers {headerLines} {
         } else {
             # Translate "Content-Type:" to "contentType", etc.
             set field [string tolower $field]
-            if {[dict exists $::http::requestFormatLowerCase $field]} {
+            if {$field eq "cookie:"} {
+                if {![dict exists $headers cookies]} {
+                    dict set headers cookies {}
+                }
+                dict set headers cookies [dict merge $headers(cookies) \
+                        [::http::parse-value $value]]
+            } elseif {[dict exists $::http::requestFormatLowerCase $field]} {
                 dict set headers $::http::requestFormatLowerCase($field) $value
             }
         }
@@ -320,6 +373,10 @@ proc ::http::serve {channel clientAddr clientPort routes} {
         }
     } else {
         dict set request formPost {}
+    }
+
+    if {[dict exists $request cookies]} {
+        ::http::log debug "cookies: $request(cookies)"
     }
 
     if {!$error} {

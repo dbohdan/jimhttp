@@ -61,7 +61,7 @@ proc ::html::make-tags {tagList {withContent 1}} {
 }
 
 # Here we actually create the tag procs.
-::html::make-tags {head body table td tr ul li a div pre form textarea \
+::html::make-tags {head body table td tr th ul li a div pre form textarea \
         h1 h2 h3 h4 h5 b i u s tt} 1
 ::html::make-tags {input submit br hr} 0
 # Create the html tag proc as a special case.
