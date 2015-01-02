@@ -1,6 +1,7 @@
 # Process command line arguments.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
+namespace eval ::arguments {}
 
 # Return a dict mapping varNames to command line argument values.
 # mandatoryArguments: a list {-arg varName ...}
@@ -10,7 +11,7 @@ proc ::arguments::parse {mandatoryArguments optionalArguments argv} {
     set error [catch {
         foreach {argument key defaultValue} $optionalArguments {
             if {[dict exists $argv $argument]} {
-                dict set result $key $argv($argument)
+                dict set result $key [dict get $argv $argument]
             } else {
                 dict set result $key $defaultValue
             }
@@ -18,7 +19,7 @@ proc ::arguments::parse {mandatoryArguments optionalArguments argv} {
         }
         foreach {argument key} $mandatoryArguments {
             if {[dict exists $argv $argument]} {
-                dict set result $key $argv($argument)
+                dict set result $key [dict get $argv $argument]
             } else {
                 error "missing argument: $argument"
             }

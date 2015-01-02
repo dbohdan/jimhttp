@@ -5,6 +5,8 @@
 # Parse the string $str containing JSON into nested Tcl dictionaries.
 # numberDictArrays: decode arrays as dictionaries with sequential integers
 # starting with zero as keys; otherwise decode them as lists.
+namespace eval ::json {}
+
 proc ::json::parse {str {numberDictArrays 0}} {
     set result [::json::decode-value $str $numberDictArrays]
     if {[lindex $result 1] eq ""} {
@@ -47,15 +49,16 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1}} {
 
         if {$numberDictArrays && $allNumeric} {
             # Produce array.
-            set arrayElements \
-                    [lmap x $values {::json::stringify $x $numberDictArrays}]
+            set arrayElements {}
+            foreach x $values {
+                lappend arrayElements [::json::stringify $x 1]
+            }
             set result "\[[join $arrayElements {, }]\]"
         } else {
             # Produce object.
             set objectDict {}
             foreach {key value} $dictionaryOrValue {
-                lappend objectDict "\"$key\": [::json::stringify \
-                        $value $numberDictArrays]"
+                lappend objectDict "\"$key\": [::json::stringify $value 0]"
             }
             set result "{[join $objectDict {, }]}"
         }
@@ -96,7 +99,7 @@ proc ::json::decode-string {str} {
     if {[regexp {^"((?:[^"\\]|\\.)*)"} $str _ result]} {
         return [list \
                 [subst -nocommands -novariables $result] \
-                [string range $str [+ 2 [string length $result]] end]]
+                [string range $str [expr {2 + [string length $result]}] end]]
                 # Add two to result length to account for the double quotes
                 # around the string.
     } else {

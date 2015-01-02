@@ -73,7 +73,7 @@ source arguments.tcl
 
 # Table generation using html.tcl.
 ::http::add-handler GET /table {
-    return [::http::make-response [::html::make-table {1 2} {3 4}]]
+    return [::http::make-response [::html::make-table {{a b} {1 2} {3 4}} 1]]
 }
 
 # Static variables in a handler.

@@ -1,6 +1,7 @@
 # Simple persistent key-value storage.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
+namespace eval ::storage {}
 
 set ::storage::db {}
 

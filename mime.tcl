@@ -1,6 +1,8 @@
 # MIME type detection by filename extension.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
+namespace eval ::mime {}
+
 set ::mime::byExtension {
     .c      text/plain
     .conf   text/plain
@@ -30,7 +32,7 @@ proc ::mime::type {filename} {
     global ::mime::byExtension
     set ext [file extension $filename]
     if {[dict exists $::mime::byExtension $ext]} {
-        return $::mime::byExtension($ext)
+        return [dict get $::mime::byExtension $ext]
     } else {
         return application/octet-stream
     }

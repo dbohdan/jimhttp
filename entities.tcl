@@ -51,6 +51,7 @@
 # authors grant the U.S. Government and others acting in its behalf
 # permission to use and distribute the software in accordance with the
 # terms specified in this license.
+namespace eval ::html {}
 
 set ::html::entities [dict create {*}{
     \xa0 &nbsp; \xa1 &iexcl; \xa2 &cent; \xa3 &pound; \xa4 &curren;

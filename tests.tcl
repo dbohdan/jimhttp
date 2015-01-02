@@ -59,7 +59,8 @@ foreach t {{!@#$%^&*()_+} {<b>Hello!</b>}} {
 
 assert-all-equal [b "Hello!"] [b "" "Hello!"] {<b>Hello!</b>}
 assert-all-equal [br] [br ""] {<br>}
-
+assert-all-equal [::html::make-table {{a b} {c d}}] \
+    {<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>}
 
 # json tests
 source json.tcl

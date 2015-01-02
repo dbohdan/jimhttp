@@ -3,6 +3,8 @@
 # License: MIT
 
 # HTML entities processing code based on http://wiki.tcl.tk/26403.
+namespace eval ::html {}
+
 source entities.tcl
 
 set ::html::entitiesInverse [lreverse $::html::entities]
@@ -61,8 +63,8 @@ proc ::html::make-tags {tagList {withContent 1}} {
 }
 
 # Here we actually create the tag procs.
-::html::make-tags {head body table td tr th ul li a div pre form textarea \
-        h1 h2 h3 h4 h5 b i u s tt} 1
+::html::make-tags {head title body table td tr th ul li a div pre form \
+        textarea h1 h2 h3 h4 h5 b i u s tt} 1
 ::html::make-tags {input submit br hr} 0
 # Create the html tag proc as a special case.
 proc html args {
@@ -71,34 +73,26 @@ proc html args {
     return $result
 }
 
-# Zip together (transpose) lists.
-proc ::html::zip args {
-    set columns $args
-    set nColumns [llength $columns]
-    set loopArgument {}
-
-    # Generate loop command argument in the form of v0 list0 v1 list1, etc.
-    set variables [lmap i [range $nColumns] { list v$i }]
-    foreach i [range $nColumns] column $columns {
-        lappend loopArgument v$i [lindex $args $i]
+proc ::html::make-table-row {items {header 0}} {
+    if {$header} {
+        set command th
+    } else {
+        set command td
     }
-
-    set result {}
-    foreach {*}$loopArgument {
-        lappend result [lmap var $variables { set $var }]
+    set cells {}
+    foreach item $items {
+        lappend cells [$command $item]
     }
-    return $result
-}
-
-proc ::html::make-table-row args {
-    tr "" {*}[lmap cell $args { td $cell }]
+    tr "" {*}$cells
 }
 
 # Return an HTML table. Each argument is converted to a table row.
-proc ::html::make-table args {
-    table {} {*}[
-        lmap row [::html::zip {*}$args] {
-            ::html::make-table-row {*}$row
-        }
-    ]
+proc ::html::make-table {rows {makeHeader 0}} {
+    set rowsProcessed {}
+    set header $makeHeader
+    foreach row $rows {
+        lappend rowsProcessed [::html::make-table-row $row $header]
+        set header 0
+    }
+    table {} {*}$rowsProcessed
 }

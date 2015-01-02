@@ -1,11 +1,14 @@
 # An HTTP server and web framework for Jim Tcl.
 # Copyright (C) 2014 Danyil Bohdan.
 # License: MIT
+namespace eval ::http {}
+
 source mime.tcl
 
 set ::http::verbosity 0
 set ::http::crashOnError 0
 set ::http::maxRequestLength [expr 16*1024*1024]
+set ::http::routes {}
 
 set ::http::statusCodePhrases [dict create {*}{
     100 Continue
