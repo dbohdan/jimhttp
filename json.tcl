@@ -85,12 +85,19 @@ proc ::json::decode-value {str {numberDictArrays 0}} {
             return [::json::decode-array $str $numberDictArrays]
         }
         {^(true|false|null)} {
-            return [list $str {}]
+            return [::json::decode-boolean-or-null $str]
         }
         default {
             error "cannot decode value as JSON: \"$str\""
         }
     }
+}
+
+# Return a list of two elements: the initial part of $str parsed as "true",
+# "false" or "null" and the remainder of $str that wasn't parsed.
+proc ::json::decode-boolean-or-null {str} {
+    regexp {^(true|false|null)} $str value
+    return [list $value [regsub {^(true|false|null)} $str ""]]
 }
 
 # Return a list of two elements: the initial part of $str parsed as a JSON
