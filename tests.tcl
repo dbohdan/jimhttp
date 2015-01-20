@@ -82,6 +82,10 @@ assert-all-equal [::json::decode-number {1.23e-99}] [list 1.23e-99 {}]
 assert-all-equal [::json::decode-number {1.23e-99, 0, 0}] \
         [list 1.23e-99 {, 0, 0}]
 
+assert-all-equal [::json::decode-value "true"] [list "true" {}]
+assert-all-equal [::json::decode-value "false"] [list "false" {}]
+assert-all-equal [::json::decode-value "null"] [list "null" {}]
+
 assert-all-equal [::json::decode-array {[1.23e-99, 0, 0]}] \
         [list {1.23e-99 0 0} {}]
 assert-all-equal [::json::decode-array {[ 1.23e-99,    0,     0 ]}] \
@@ -92,10 +96,9 @@ assert-all-equal [::json::decode-array {["alpha", "beta", "gamma"]} 0] \
         [list {alpha beta gamma} {}]
 assert-all-equal [::json::decode-array {["alpha", "beta", "gamma"]} 1] \
         [list {0 alpha 1 beta 2 gamma} {}]
+assert-all-equal [::json::decode-array {[true,     false,null ]} 1] \
+        [list {0 true 1 false 2 null} {}]
 
-assert-all-equal [::json::parse "true"] "true"
-assert-all-equal [::json::parse "false"] "false"
-assert-all-equal [::json::parse "null"] "null"
 
 assert-all-equal [::json::decode-object {{"key": "value"}}] \
         [list {key value} {}]
