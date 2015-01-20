@@ -1,5 +1,5 @@
 # Templating engine.
-# Copyright (C) 2014 Danyil Bohdan.
+# Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
 namespace eval ::template {}
 

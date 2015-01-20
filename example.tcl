@@ -1,6 +1,6 @@
 #!/usr/bin/env jimsh
 # An HTTP server and web framework for Jim Tcl.
-# Copyright (C) 2014 Danyil Bohdan.
+# Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
 source http.tcl
 source html.tcl

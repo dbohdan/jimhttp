@@ -1,6 +1,6 @@
 #!/usr/bin/env jimsh
 # Tests for the web framework and its modules.
-# Copyright (C) 2014 Danyil Bohdan.
+# Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
 
 proc assert {expression {message ""}} {
