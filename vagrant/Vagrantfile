@@ -13,7 +13,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # vb.customize ["modifyvm", :id, "--cpuexecutioncap", "80"]
   end
 
-  config.vm.define "jimhttpdev", autostart: false do |jimhttpdev|
+  config.vm.define "jimhttpdev" do |jimhttpdev|
     jimhttpdev.vm.box = "ubuntu/trusty64"
     jimhttpdev.vm.network "forwarded_port", guest: 8080, host: 8080
   end

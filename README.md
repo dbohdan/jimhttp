@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/dbohdan/jimhttp.svg)](https://travis-ci.org/dbohdan/jimhttp)
+
 A web microframework prototype for [Jim Tcl](http://jim.tcl.tk/). Provides a
 rough implementation of the HTTP protocol as well as routing, templates, JSON
 generation and parsing, an HTML DSL and persistent storage powered by SQLite3.
@@ -32,8 +34,8 @@ http::start-server 127.0.0.1 8080
 ```
 # Requirements
 
-Compile the latest Jim Tcl from the Git repository. The current stable release
-(0.75) or earlier releases will not work. You will need an SQLite3 development
+Compile Jim Tcl 0.76 or later from the Git repository. Previous stable
+releases (0.75 or earlier) will not work. You will need an SQLite3 development
 package (`libsqlite3-dev` on Debian/Ubuntu, `libsqlite3x-devel` on Fedora).
 
 ```sh

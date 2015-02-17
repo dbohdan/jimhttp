@@ -1,0 +1,4 @@
+language: c
+install:
+- sudo ./vagrant/install-jimtcl.sh
+script: ./tests.tcl
