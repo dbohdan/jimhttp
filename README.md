@@ -8,29 +8,29 @@ generation and parsing, an HTML DSL and persistent storage powered by SQLite3.
 ```Tcl
 source http.tcl
 
-http::add-handler GET /hello/:name/:town {
-    return [http::make-response \
+::http::add-handler GET /hello/:name/:town {
+    return [::http::make-response \
             "Hello, $routeVars(name) from $routeVars(town)!"]
 }
 
-http::start-server 127.0.0.1 8080
+::http::start-server 127.0.0.1 8080
 ```
 
 ```Tcl
 source http.tcl
 source storage.tcl
 
-http::add-handler GET /counter-persistent {{counter 0}} {
-    storage::restore-statics
+::http::add-handler GET /counter-persistent {{counter 0}} {
+    ::storage::restore-statics
 
     incr counter
 
-    storage::persist-statics
-    return [http::make-response $counter]
+    ::storage::persist-statics
+    return [::http::make-response $counter]
 }
 
-storage::init
-http::start-server 127.0.0.1 8080
+::storage::init
+::http::start-server 127.0.0.1 8080
 ```
 # Requirements
 
