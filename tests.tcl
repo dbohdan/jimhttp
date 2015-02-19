@@ -98,6 +98,8 @@ assert-all-equal [::json::decode-array {["alpha", "beta", "gamma"]} 1] \
         [list {0 alpha 1 beta 2 gamma} {}]
 assert-all-equal [::json::decode-array {[true,     false,null ]} 1] \
         [list {0 true 1 false 2 null} {}]
+assert-all-equal [::json::decode-array {[]} 1] \
+        [list {} {}]
 
 
 assert-all-equal [::json::decode-object {{"key": "value"}}] \

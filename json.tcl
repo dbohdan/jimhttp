@@ -144,11 +144,12 @@ proc ::json::decode-array {str {numberDictArrays 0}} {
         set str [string range $str 1 end]
     }
     while 1 {
-        # Empty array, get out from here.
-        if { [string index [string trimleft $str] 0] eq "\]" } {
+        # Empty array => break out of the loop.
+        if {[string index [string trimleft $str] 0] eq "\]"} {
             set str [string range [string trimleft $str] 1 end]
             break
         }
+
         # Value.
         lassign [::json::decode-value $str $numberDictArrays] value str
         set str [string trimleft $str]
