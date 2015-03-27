@@ -11,15 +11,15 @@ proc ::arguments::parse {mandatoryArguments optionalArguments argv} {
     set error [catch {
         foreach {argument key defaultValue} $optionalArguments {
             if {[dict exists $argv $argument]} {
-                dict set result $key [dict get $argv $argument]
+                lappend result $key [dict get $argv $argument]
             } else {
-                dict set result $key $defaultValue
+                lappend result $key $defaultValue
             }
             dict unset argv $argument
         }
         foreach {argument key} $mandatoryArguments {
             if {[dict exists $argv $argument]} {
-                dict set result $key [dict get $argv $argument]
+                lappend result $key [dict get $argv $argument]
             } else {
                 error "missing argument: $argument"
             }
@@ -32,7 +32,7 @@ proc ::arguments::parse {mandatoryArguments optionalArguments argv} {
     if {$argv ne ""} {
         error "unknown argument(s): $argv"
     }
-    return $result
+    return [dict create {*}$result]
 }
 
 # Return a usage message.

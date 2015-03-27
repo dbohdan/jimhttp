@@ -56,9 +56,9 @@ proc ::html::make-tags {tagList {withContent 1}} {
     }
     foreach tag $tagList {
         # Proc static variables are not use for the sake of Tcl compatibility.
-        uplevel 1 [list proc $tag args [
+        proc [namespace parent]::$tag args [
             format {%s %s {*}$args} $procName $tag
-        ]]
+        ]
     }
 }
 
