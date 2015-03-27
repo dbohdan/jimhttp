@@ -168,6 +168,14 @@ test json \
     assert-all-equal [::json::stringify {} 1 ""] {}
     assert-all-equal [::json::stringify {} 1 array] {[]}
     assert-all-equal [::json::stringify {} 1 object] "{}"
+    assert-all-equal \
+            [::json::stringify \
+                    {0 1 1 {0 1} 2 {0 x 1 null}} 1 \
+                    {0 boolean 1 {0 boolean} 2 array}] \
+            {[true, [true], ["x", null]]}
+    assert-all-equal \
+            [::json::stringify {1 {key 1} 2 {x null} 3} 0 array] \
+            {[1, {"key": 1}, 2, {"x": null}, 3]}
 }
 
 # arguments tests

@@ -16,24 +16,12 @@ proc ::json::parse {str {numberDictArrays 0}} {
     }
 }
 
-proc ::json::number-dict? {dictionary} {
-    set allNumericKeys 1
-    set i 0
-    foreach {key value} $dictionary {
-        set allNumericKeys [expr {$allNumericKeys && ($key == $i)}]
-        if {!$allNumericKeys} {
-            return 0
-        }
-        incr i
-    }
-    return 1
-}
-
 # Serialize nested Tcl dictionaries as JSON.
 #
 # numberDictArrays: encode dictionaries with keys {0 1 2 3 ...} as arrays, e.g.,
-# {0 a 1 b} to ["a", "b"]. Without numberDictArrays set stringify will *only*
-# try to produce objects from Tcl lists or dictionaries.
+# {0 a 1 b} to ["a", "b"]. If numberDictArrays is not true stringify will try to
+# produce objects from all Tcl lists and dictionaries unless explicitly told
+# otherwise in the schema.
 #
 # schema: data types for values in $dictionaryOrValue. $schema consists of
 # nested dictionaries where the keys are either those in $dictionaryOrValue or
@@ -71,48 +59,78 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}} {
             error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
         }
     } else {
-        # Dictionary.
+        # Dictionary or list.
+        set validDict [expr { [llength $dictionaryOrValue] % 2 == 0 }]
         set isArray [expr {
-            ($schema eq "array") ||
-            (($schema ne "object") &&
-                    $numberDictArrays &&
-                    [number-dict? $dictionaryOrValue])
-        }]
-        set isObject [expr {
-            ($schema eq "object") ||
-            ([llength $dictionaryOrValue] % 2 == 0)
+            ($numberDictArrays &&
+                    ($schema ne "object") &&
+                    $validDict &&
+                    [number-dict? $dictionaryOrValue]) ||
+
+            (!$numberDictArrays && ($schema eq "array"))
         }]
 
         if {$isArray} {
-            # Produce array.
-            set arrayElements {}
-            foreach {key value} $dictionaryOrValue {
-                if {$schema ne ""} {
-                    set valueSchema [list [dict get $schema $key]]
-                } else {
-                    set valueSchema ""
-                }
-                lappend arrayElements [::json::stringify $value 1 $valueSchema]
-            }
-            set result "\[[join $arrayElements {, }]\]"
-        } elseif {$isObject} {
-            # Produce object.
-            set objectDict {}
-            foreach {key value} $dictionaryOrValue {
-                if {$schema ne ""} {
-                    set valueSchema [dict get $schema $key]
-                } else {
-                    set valueSchema ""
-                }
-                lappend objectDict "\"$key\": [::json::stringify $value \
-                        $numberDictArrays $valueSchema]"
-            }
-            set result "{[join $objectDict {, }]}"
+            set result [stringify-array $dictionaryOrValue \
+                    $numberDictArrays $schema]
+        } elseif {$validDict} {
+            set result [stringify-object $dictionaryOrValue \
+                    $numberDictArrays $schema]
         } else {
             error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
         }
     }
     return $result
+}
+
+# Return 1 if the keys in dictionary are numbers 0, 1, 2... and 0 otherwise.
+proc ::json::number-dict? {dictionary} {
+    set allNumericKeys 1
+    set i 0
+    foreach {key value} $dictionary {
+        set allNumericKeys [expr { $allNumericKeys && ($key == $i) }]
+        if {!$allNumericKeys} {
+            return 0
+        }
+        incr i
+    }
+    return 1
+}
+
+proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}} {
+    set arrayElements {}
+    if {$numberDictArrays} {
+        foreach {key value} $array {
+            if {$schema in {"" "array"}} {
+                set valueSchema ""
+            } else {
+                set valueSchema [dict get $schema $key]
+            }
+            lappend arrayElements [::json::stringify $value 1 $valueSchema]
+        }
+    } else { ;# list arrays
+        foreach value $array valueSchema $schema {
+            if {$schema in {"" "array"}} {
+                set valueSchema ""
+            }
+            lappend arrayElements [::json::stringify $value 0 $valueSchema]
+        }
+    }
+    set result "\[[join $arrayElements {, }]\]"
+}
+
+proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}} {
+    set objectDict {}
+    foreach {key value} $dictionary {
+        if {$schema in {"" "object"}} {
+            set valueSchema ""
+        } else {
+            set valueSchema [dict get $schema $key]
+        }
+        lappend objectDict "\"$key\": [::json::stringify $value \
+                $numberDictArrays $valueSchema]"
+    }
+    set result "{[join $objectDict {, }]}"
 }
 
 # Choose how to decode a JSON value. Return a list consisting of the result of
