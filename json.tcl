@@ -185,6 +185,11 @@ proc ::json::decode-object {str {numberDictArrays 0}} {
     while 1 {
         # Key string.
         set str [string trimleft $str]
+        # Empty object => break out of the loop.
+        if {[string index $str 0] eq "\}"} {
+            set str [string range $str 1 end]
+            break
+        }
         lassign [::json::decode-string $str] value str
         set str [string trimleft $str]
         lappend result $value

@@ -111,6 +111,7 @@ assert-all-equal [::json::decode-object {{"key": [1, 2, 3]}}] \
 assert-all-equal \
         [::json::decode-object {{"k1": true, "k2": false, "k3": null}}] \
         [list {k1 true k2 false k3 null} {}]
+assert-all-equal [::json::decode-object {{}}] [list {} {}]
 
 assert-all-equal [::json::parse [::json::stringify $d 1] 1] $d
 
