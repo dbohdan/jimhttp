@@ -28,11 +28,15 @@ proc ::json::parse {str {numberDictArrays 0}} {
 # their superset and the values specify data types. Those values can each be
 # one of "array", "boolean", "null", "number", "object" or "string" as well as
 # "array:(element type)" and "object:(element type)".
-proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}} {
+#
+# strictSchema: generate an error if there is no schema for a value in
+# $dictionaryOrValue.
+proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
+        {strictSchema 0}} {
     set result {}
 
-    lassign [array-schema $schema] schemaArray _
-    lassign [object-schema $schema] schemaObject _
+    lassign [::json::array-schema $schema] schemaArray _
+    lassign [::json::object-schema $schema] schemaObject _
 
     if {$schema eq "string"} {
         return "\"$dictionaryOrValue\""
@@ -80,11 +84,11 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}} {
         }]
 
         if {$isArray} {
-            set result [stringify-array $dictionaryOrValue \
-                    $numberDictArrays $schema]
+            set result [::json::stringify-array $dictionaryOrValue \
+                    $numberDictArrays $schema $strictSchema]
         } elseif {$validDict} {
-            set result [stringify-object $dictionaryOrValue \
-                    $numberDictArrays $schema]
+            set result [::json::stringify-object $dictionaryOrValue \
+                    $numberDictArrays $schema $strictSchema]
         } else {
             error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
         }
@@ -122,7 +126,23 @@ proc ::json::number-dict? {dictionary} {
     return 1
 }
 
-proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}} {
+# Return the value for key $key from $schema if the key is present. Otherwise
+# either return the default value "" or, if $strictSchema is true, generate an
+# error.
+proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
+    if {[dict exists $schema $key]} {
+        set valueSchema [dict get $schema $key]
+    } else {
+        if {$strictSchema} {
+            error "missing schema for key \"$key\""
+        } else {
+            set valueSchema ""
+        }
+    }
+}
+
+proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
+        {strictSchema 0}} {
     set arrayElements {}
     lassign [array-schema $schema] schemaArray subschema
     if {$numberDictArrays} {
@@ -130,32 +150,37 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}} {
             if {($schema eq "") || $schemaArray} {
                 set valueSchema $subschema
             } else {
-                set valueSchema [dict get $schema $key]
+                set valueSchema [::json::get-schema-by-key \
+                        $schema $key $strictSchema]
             }
-            lappend arrayElements [::json::stringify $value 1 $valueSchema]
+            lappend arrayElements [::json::stringify $value 1 \
+                    $valueSchema $strictSchema]
         }
     } else { ;# list arrays
         foreach value $array valueSchema $schema {
             if {($schema eq "") || $schemaArray} {
                 set valueSchema $subschema
             }
-            lappend arrayElements [::json::stringify $value 0 $valueSchema]
+            lappend arrayElements [::json::stringify $value 0 \
+                    $valueSchema $strictSchema]
         }
     }
     set result "\[[join $arrayElements {, }]\]"
 }
 
-proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}} {
+proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
+        {strictSchema 0}} {
     set objectDict {}
     lassign [object-schema $schema] schemaObject subschema
     foreach {key value} $dictionary {
         if {($schema eq "") || $schemaObject} {
             set valueSchema $subschema
         } else {
-            set valueSchema [dict get $schema $key]
+                set valueSchema [::json::get-schema-by-key \
+                        $schema $key $strictSchema]
         }
         lappend objectDict "\"$key\": [::json::stringify $value \
-                $numberDictArrays $valueSchema]"
+                $numberDictArrays $valueSchema $strictSchema]"
     }
     set result "{[join $objectDict {, }]}"
 }

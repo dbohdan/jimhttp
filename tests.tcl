@@ -159,7 +159,7 @@ test json \
             [::json::stringify {key1 {0 a 1 b}} 1 {key1 {0 string 1 string}}] \
             {{"key1": ["a", "b"]}}
     assert [catch {
-        ::json::stringify {key1 {0 a 1 b}} 1 {key1 {0 string 2 string}}
+        ::json::stringify {key1 {0 a 1 b}} 1 {key1 {0 string 2 string}} 1
     }]
     assert [catch {
         ::json::stringify {key1 {0 a 1 b}} 1 {key1 {0 boolean}}
@@ -193,7 +193,7 @@ test json \
             [::json::stringify {1 {key 1} 2 {x null}} 1 object:string] \
             {{"1": "key 1", "2": "x null"}}
     assert-all-equal \
-            [::json::stringify {key {true false null}} 0 object:array] \
+            [::json::stringify {key {true false null}} 0 object:array:string] \
             {{"key": ["true", "false", "null"]}}
 }
 
