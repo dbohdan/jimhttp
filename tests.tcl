@@ -173,9 +173,28 @@ test json \
                     {0 1 1 {0 1} 2 {0 x 1 null}} 1 \
                     {0 boolean 1 {0 boolean} 2 array}] \
             {[true, [true], ["x", null]]}
+
     assert-all-equal \
             [::json::stringify {1 {key 1} 2 {x null} 3} 0 array] \
             {[1, {"key": 1}, 2, {"x": null}, 3]}
+    assert-all-equal \
+            [::json::stringify {1 {key 1} 2 {x null} 3} 0 string] \
+            {"1 {key 1} 2 {x null} 3"}
+    assert-all-equal \
+            [::json::stringify {1 {key 1} 2 {x null} 3} 0 array:string] \
+            {["1", "key 1", "2", "x null", "3"]}
+    assert-all-equal \
+            [::json::stringify {1 {key 1} 2 {x null}} 0 object:string] \
+            {{"1": "key 1", "2": "x null"}}
+    assert-all-equal \
+            [::json::stringify {0 {key 1} 1 {x null}} 1 array:string] \
+            {["key 1", "x null"]}
+    assert-all-equal \
+            [::json::stringify {1 {key 1} 2 {x null}} 1 object:string] \
+            {{"1": "key 1", "2": "x null"}}
+    assert-all-equal \
+            [::json::stringify {key {true false null}} 0 object:array] \
+            {{"key": ["true", "false", "null"]}}
 }
 
 # arguments tests

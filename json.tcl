@@ -26,11 +26,20 @@ proc ::json::parse {str {numberDictArrays 0}} {
 # schema: data types for values in $dictionaryOrValue. $schema consists of
 # nested dictionaries where the keys are either those in $dictionaryOrValue or
 # their superset and the values specify data types. Those values can each be
-# one of "array", "boolean", "null", "number", "object" or "string".
+# one of "array", "boolean", "null", "number", "object" or "string" as well as
+# "array:(element type)" and "object:(element type)".
 proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}} {
     set result {}
+
+    lassign [array-schema $schema] schemaArray _
+    lassign [object-schema $schema] schemaObject _
+
+    if {$schema eq "string"} {
+        return "\"$dictionaryOrValue\""
+    }
+
     if {([llength $dictionaryOrValue] <= 1) &&
-            ($schema ni {"array" "object"})} {
+            !$schemaArray && !$schemaObject} {
         # Value.
         set isNumber [expr {
             ($schema in {"" "number"}) &&
@@ -53,7 +62,7 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}} {
                         [string map {0 false 1 true} $dictionaryOrValue]
             }
             set result $dictionaryOrValue
-        } elseif {$schema in {"" "string"}} {
+        } elseif {$schema eq ""} {
             set result "\"$dictionaryOrValue\""
         } else {
             error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
@@ -63,11 +72,11 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}} {
         set validDict [expr { [llength $dictionaryOrValue] % 2 == 0 }]
         set isArray [expr {
             ($numberDictArrays &&
-                    ($schema ne "object") &&
+                    !$schemaObject &&
                     $validDict &&
                     [number-dict? $dictionaryOrValue]) ||
 
-            (!$numberDictArrays && ($schema eq "array"))
+            (!$numberDictArrays && $schemaArray)
         }]
 
         if {$isArray} {
@@ -81,6 +90,22 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}} {
         }
     }
     return $result
+}
+
+# Returns a list of two values: whether the $schema is a schema for an array and
+# the "subschema" after "array:", if any.
+proc ::json::array-schema {schema {numberDictArrays 1}} {
+    return [list [expr {
+        ($schema eq "array") || [string match "array:*" $schema]
+    }] [string range $schema 6 end]]
+}
+
+# Returns a list of two values: whether the $schema is a schema for an object
+# and the "subschema" after "object:", if any.
+proc ::json::object-schema {schema {numberDictArrays 1}} {
+    return [list [expr {
+        ($schema eq "object") || [string match "object:*" $schema]
+    }] [string range $schema 7 end]]
 }
 
 # Return 1 if the keys in dictionary are numbers 0, 1, 2... and 0 otherwise.
@@ -99,10 +124,11 @@ proc ::json::number-dict? {dictionary} {
 
 proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}} {
     set arrayElements {}
+    lassign [array-schema $schema] schemaArray subschema
     if {$numberDictArrays} {
         foreach {key value} $array {
-            if {$schema in {"" "array"}} {
-                set valueSchema ""
+            if {($schema eq "") || $schemaArray} {
+                set valueSchema $subschema
             } else {
                 set valueSchema [dict get $schema $key]
             }
@@ -110,8 +136,8 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}} {
         }
     } else { ;# list arrays
         foreach value $array valueSchema $schema {
-            if {$schema in {"" "array"}} {
-                set valueSchema ""
+            if {($schema eq "") || $schemaArray} {
+                set valueSchema $subschema
             }
             lappend arrayElements [::json::stringify $value 0 $valueSchema]
         }
@@ -121,9 +147,10 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}} {
 
 proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}} {
     set objectDict {}
+    lassign [object-schema $schema] schemaObject subschema
     foreach {key value} $dictionary {
-        if {$schema in {"" "object"}} {
-            set valueSchema ""
+        if {($schema eq "") || $schemaObject} {
+            set valueSchema $subschema
         } else {
             set valueSchema [dict get $schema $key]
         }
