@@ -36,12 +36,14 @@ source storage.tcl
 
 Compile Jim Tcl 0.76 or later from the Git repository. Previous stable
 releases (0.75 or earlier) will not work. You will need an SQLite3 development
-package (`libsqlite3-dev` on Debian/Ubuntu, `libsqlite3x-devel` on Fedora).
+package (`libsqlite3-dev` on Debian/Ubuntu, `libsqlite3x-devel` on
+Fedora) and `asciidoc` to create the documentation (don't use
+`--disable-docs` then).
 
 ```sh
 git clone https://github.com/msteveb/jimtcl.git
 cd jimtcl
-./configure --with-ext="oo tree binary sqlite3" --enable-utf8 --ipv6
+./configure --with-ext="oo tree binary sqlite3" --enable-utf8 --ipv6 --disable-docs
 make
 sudo make install
 ```
@@ -68,7 +70,6 @@ Run the following commands in the terminal:
 ```sh
 git clone https://github.com/dbohdan/jimhttp.git
 cd jimhttp/vagrant
-vagrant box add ubuntu/trusty64
 vagrant up
 ```
 
@@ -77,14 +78,11 @@ the server when you edit `example.tcl`.
 
 Stop the VM with
 
-    ^C
-    ^C
     vagrant halt
 
 Run the server again with
 
     vagrant up
-    vagrant provision
 
 # License
 
