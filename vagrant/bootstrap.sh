@@ -5,4 +5,4 @@ if test ! -x "$(which jimsh)"; then
     /vagrant/install-jimtcl.sh
 fi
 
-/vagrant/testserver.sh > /vagrant/testserver.log 2>&1 &
+/vagrant/test-server.sh > /vagrant/test-server.log 2>&1 &

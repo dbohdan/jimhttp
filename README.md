@@ -37,8 +37,8 @@ source storage.tcl
 Compile Jim Tcl 0.76 or later from the Git repository. Previous stable
 releases (0.75 or earlier) will not work. You will need an SQLite3 development
 package (`libsqlite3-dev` on Debian/Ubuntu, `libsqlite3x-devel` on
-Fedora) and `asciidoc` to create the documentation (don't use
-`--disable-docs` then).
+Fedora) to do this and optionally AsciiDoc (`asciidoc` on Debian/Ubuntu
+and Fedora) to generate the documentation (don't use `--disable-docs` then).
 
 ```sh
 git clone https://github.com/msteveb/jimtcl.git

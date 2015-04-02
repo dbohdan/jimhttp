@@ -2,11 +2,16 @@
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
 
+### The public API: will remain backwards compatible for a major release
+### version of this module.
+
+namespace eval ::json {
+    variable version 1.0.0
+}
+
 # Parse the string $str containing JSON into nested Tcl dictionaries.
 # numberDictArrays: decode arrays as dictionaries with sequential integers
 # starting with zero as keys; otherwise decode them as lists.
-namespace eval ::json {}
-
 proc ::json::parse {str {numberDictArrays 0}} {
     set result [::json::decode-value $str $numberDictArrays]
     if {[lindex $result 1] eq ""} {
@@ -96,6 +101,10 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
     return $result
 }
 
+### The private API: can change at any time.
+
+## Procedures used by ::json::stringify.
+
 # Returns a list of two values: whether the $schema is a schema for an array and
 # the "subschema" after "array:", if any.
 proc ::json::array-schema {schema {numberDictArrays 1}} {
@@ -184,6 +193,8 @@ proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
     }
     set result "{[join $objectDict {, }]}"
 }
+
+## Procedures used by ::json::parse.
 
 # Choose how to decode a JSON value. Return a list consisting of the result of
 # parsing the initial part of $str and the remainder of $str that was not
