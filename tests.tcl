@@ -223,7 +223,8 @@ test example \
     set curlAvailable [expr {![catch {exec curl -V}]}]
     if {$curlAvailable} {
         proc test-url args {
-            return [exec curl -S {*}$args 2>/dev/null]
+            set result [exec curl -S {*}$args 2>/dev/null]
+            return $result
         }
 
         set port 8080
@@ -251,32 +252,41 @@ test example \
 <li><a href="/template">/template</a></li>
 <li><a href="/quit">/quit</a></li></ul></html>}
 
-        exec jimsh example.tcl -v 0 &
-        assert-all-equal [test-url $url] $index
-        assert-all-equal \
-                [test-url $url/does-not-exist] \
-                {<h1>Error 404: Not Found</h1> }
-        assert-all-equal [test-url $url] $index
+        set handle [open {| jimsh example.tcl -v 99}]
+        set pid [pid $handle]
+        # Wait until the server is ready to respond.
+        $handle readable { set ::ready 1 }
+        vwait ::ready
+        try {
+            assert-all-equal [test-url $url] $index
+            assert-all-equal \
+                    [test-url $url/does-not-exist] \
+                    {<h1>Error 404: Not Found</h1> }
+            assert-all-equal [test-url $url] $index
 
-        # Binary file corruption test.
-        set tempFile1 /tmp/jimhttp.test
-        set tempFile2 /tmp/jimhttp.test.echo
-        exec dd if=/dev/urandom of=$tempFile1 bs=1024 count=1024
-        exec curl -o "$tempFile2" -X POST -F "testfile=@$tempFile1" \
-                $url/file-echo
-        set fileContents1 [::http::read-file $tempFile1]
-        set fileContents2 [::http::read-file $tempFile2]
+            # Binary file corruption test.
+            set tempFile1 /tmp/jimhttp.test
+            set tempFile2 /tmp/jimhttp.test.echo
+            exec dd if=/dev/urandom of=$tempFile1 bs=1024 count=1024
+            exec curl -o "$tempFile2" -X POST -F "testfile=@$tempFile1" \
+                    $url/file-echo
+            set fileContents1 [::http::read-file $tempFile1]
+            set fileContents2 [::http::read-file $tempFile2]
 
-        assert [list \
-            [string bytelength $fileContents1] == \
-            [string bytelength $fileContents2]] "file corruption test file size"
-        assert [expr {$fileContents1 eq $fileContents2}] \
-                "file corruption test file contents"
-        file delete $tempFile1
-        file delete $tempFile2
-        # End file corruption test
+            assert [list \
+                    [string bytelength $fileContents1] == \
+                    [string bytelength $fileContents2]] \
+                    "file corruption test file size"
+            assert [expr {$fileContents1 eq $fileContents2}] \
+                    "file corruption test file contents"
+            file delete $tempFile1
+            file delete $tempFile2
+            # End file corruption test
 
-        assert-all-equal [test-url $url/quit] {Bye!}
+            assert-all-equal [test-url $url/quit] {Bye!}
+        } finally {
+            kill $pid
+        }
     }
 }
 
