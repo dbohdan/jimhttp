@@ -1,7 +1,9 @@
 # Templating engine.
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
-namespace eval ::template {}
+namespace eval ::template {
+    variable version 1.0.0
+}
 
 # Convert a template into Tcl code.
 proc ::template::parse {template} {

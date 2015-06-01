@@ -4,6 +4,8 @@
 # License: MIT
 
 namespace eval ::testing {
+    variable version 0.1.0
+
     namespace export *
     variable tests {}
     variable constraints {}

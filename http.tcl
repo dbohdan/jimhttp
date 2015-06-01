@@ -1,7 +1,9 @@
 # An HTTP server and web framework for Jim Tcl.
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
-namespace eval ::http {}
+namespace eval ::http {
+    variable version 0.11.2
+}
 
 source mime.tcl
 

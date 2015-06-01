@@ -1,7 +1,9 @@
 # Process command line arguments.
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
-namespace eval ::arguments {}
+namespace eval ::arguments {
+    variable version 1.0.0
+}
 
 # Return a dict mapping varNames to command line argument values.
 # mandatoryArguments: a list {-arg varName ...}

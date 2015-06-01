@@ -3,7 +3,9 @@
 # License: MIT
 
 # HTML entities processing code based on http://wiki.tcl.tk/26403.
-namespace eval ::html {}
+namespace eval ::html {
+    variable version 0.2.0
+}
 
 source entities.tcl
 

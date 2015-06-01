@@ -4,7 +4,39 @@ A web microframework prototype for [Jim Tcl](http://jim.tcl.tk/). Provides a
 rough implementation of the HTTP protocol as well as routing, templates, JSON
 generation and parsing, an HTML DSL and persistent storage powered by SQLite3.
 
+# Components
+
+The components listed below work in Tcl 8.5, Tcl 8.6 and Jim Tcl 0.76 or later
+unless indicated otherwise.
+
+| Filename | Function |
+|----------|----------|
+| [arguments.tcl](arguments.tcl) | Command line argument parsing. |
+| [example.tcl](example.tcl)&#x200A;<sup>1</sup> | A sample web server that demonstrates the use of the other components. |
+| [entities.tcl](entities.tcl) | A dictionary mapping characters to HTML entities. |
+| [html.tcl](html.tcl) | A DSL for HTML generation. Requires entities.tcl. |
+| [http.tcl](http.tcl)&#x200A;<sup>1</sup> | The titular web microframework. Requires mime.tcl |
+| [json.tcl](json.tcl) | JSON generation with schema support&#x200A;<sup>2</sup>. JSON parsing&#x200A;<sup>3</sup>. |
+| [mime.tcl](mime.tcl) | Rudimentary MIME type detection based on the file extension. |
+| [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | SQLite persistence of static variables. |
+| [template.tcl](template.tcl) | [tmpl_parser](http://wiki.tcl.tk/20363) templating. |
+| [testing.tcl](testing.tcl) | A test framework with support for tcltest-style constraints. |
+| [tests.tcl](tests.tcl) | Tests for other components.&#x200A;<sup>4</sup> |
+
+1\. Jim Tcl-only.
+
+2\. Schemas define data types. See the example below.
+
+3\. **Warning:** parsing is currently very slow. The
+[jq module](http://wiki.tcl.tk/11630) provides fast JSON parsing in Jim Tcl
+through an external binary.
+
+4\. Only the compatible components are tested in Tcl 8.5/8.6.
+
 # Use examples
+
+## http.tcl
+
 ```Tcl
 source http.tcl
 
@@ -15,6 +47,8 @@ source http.tcl
 
 ::http::start-server 127.0.0.1 8080
 ```
+
+## http.tcl and storage.tcl
 
 ```Tcl
 source http.tcl
@@ -32,6 +66,27 @@ source storage.tcl
 ::storage::init
 ::http::start-server 127.0.0.1 8080
 ```
+
+## json.tcl
+
+```Tcl
+# This produces the output
+# {"a": "123", "b": 123, "c": [123, 456], "d": "true", "e": true}
+source json.tcl
+
+puts [::json::stringify {
+    a 123
+    b 123
+    c {123 456}
+    d true
+    e true
+} 0 {
+    a string
+    c array:number
+    d string
+}]
+```
+
 # Requirements
 
 Compile Jim Tcl 0.76 or later from the Git repository. Previous stable

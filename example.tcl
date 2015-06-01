@@ -2,12 +2,12 @@
 # An HTTP server and web framework for Jim Tcl.
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
-source http.tcl
+source arguments.tcl
 source html.tcl
+source http.tcl
+source json.tcl
 source storage.tcl
 source template.tcl
-source json.tcl
-source arguments.tcl
 
 # This file showcases the various features of the framework and the ways in
 # which it can be used (e.g., HTML DSL vs. templates).
