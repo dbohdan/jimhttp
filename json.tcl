@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 1.0.1
+    variable version 1.1.0
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
@@ -36,8 +36,10 @@ proc ::json::parse {str {numberDictArrays 0}} {
 #
 # strictSchema: generate an error if there is no schema for a value in
 # $dictionaryOrValue.
+#
+# compact: no decorative whitespace.
 proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
-        {strictSchema 0}} {
+        {strictSchema 0} {compact 0}} {
     set result {}
 
     lassign [::json::array-schema $schema] schemaArray _
@@ -90,10 +92,10 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
 
         if {$isArray} {
             set result [::json::stringify-array $dictionaryOrValue \
-                    $numberDictArrays $schema $strictSchema]
+                    $numberDictArrays $schema $strictSchema $compact]
         } elseif {$validDict} {
             set result [::json::stringify-object $dictionaryOrValue \
-                    $numberDictArrays $schema $strictSchema]
+                    $numberDictArrays $schema $strictSchema $compact]
         } else {
             error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
         }
@@ -151,9 +153,10 @@ proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
 }
 
 proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
-        {strictSchema 0}} {
+        {strictSchema 0} {compact 0}} {
     set arrayElements {}
     lassign [array-schema $schema] schemaArray subschema
+
     if {$numberDictArrays} {
         foreach {key value} $array {
             if {($schema eq "") || $schemaArray} {
@@ -171,16 +174,31 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
                 set valueSchema $subschema
             }
             lappend arrayElements [::json::stringify $value 0 \
-                    $valueSchema $strictSchema]
+                    $valueSchema $strictSchema $compact]
         }
     }
-    set result "\[[join $arrayElements {, }]\]"
+
+    if {$compact} {
+        set elementSeparator ,
+    } else {
+        set elementSeparator {, }
+    }
+    set result "\[[join $arrayElements $elementSeparator]\]"
 }
 
 proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
-        {strictSchema 0}} {
+        {strictSchema 0} {compact 0}} {
     set objectDict {}
     lassign [object-schema $schema] schemaObject subschema
+
+    if {$compact} {
+        set elementSeparator ,
+        set keyValueSeparator :
+    } else {
+        set elementSeparator {, }
+        set keyValueSeparator {: }
+    }
+
     foreach {key value} $dictionary {
         if {($schema eq "") || $schemaObject} {
             set valueSchema $subschema
@@ -188,10 +206,11 @@ proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
                 set valueSchema [::json::get-schema-by-key \
                         $schema $key $strictSchema]
         }
-        lappend objectDict "\"$key\": [::json::stringify $value \
-                $numberDictArrays $valueSchema $strictSchema]"
+        lappend objectDict "\"$key\"$keyValueSeparator[::json::stringify \
+                $value $numberDictArrays $valueSchema $strictSchema $compact]"
     }
-    set result "{[join $objectDict {, }]}"
+
+    set result "{[join $objectDict $elementSeparator]}"
 }
 
 ## Procedures used by ::json::parse.
