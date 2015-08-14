@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 1.1.0
+    variable version 1.2.0
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
@@ -85,7 +85,7 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
             ($numberDictArrays &&
                     !$schemaObject &&
                     $validDict &&
-                    [number-dict? $dictionaryOrValue]) ||
+                    [::json::number-dict? $dictionaryOrValue]) ||
 
             (!$numberDictArrays && $schemaArray)
         }]
@@ -103,7 +103,30 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
     return $result
 }
 
+# A convenience wrapper for ::json::stringify with named parameters.
+proc ::json::stringify2 {dictionaryOrValue args} {
+    set numberDictArrays [::json::get-arg $args -numberDictArrays 1]
+    set schema [::json::get-arg $args -schema {}]
+    set strictSchema [::json::get-arg $args -strictSchema 0]
+    set compact [::json::get-arg $args -compact 0]
+
+    ::json::stringify \
+            $dictionaryOrValue $numberDictArrays $schema $strictSchema $compact
+}
+
 ### The private API: can change at any time.
+
+## Utility procedures.
+
+# If $argument is a key in $dictionary return its value. If not, return
+# $default.
+proc ::json::get-arg {dictionary argument default} {
+    if {[dict exists $dictionary $argument]} {
+        return [dict get $dictionary $argument]
+    } else {
+        return $default
+    }
+}
 
 ## Procedures used by ::json::stringify.
 
