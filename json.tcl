@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 1.0.0
+    variable version 1.0.1
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
@@ -52,8 +52,8 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
         # Value.
         set isNumber [expr {
             ($schema in {"" "number"}) &&
-            ([string is integer $dictionaryOrValue] ||
-                    [string is double $dictionaryOrValue])
+            ([string is integer -strict $dictionaryOrValue] ||
+                    [string is double -strict $dictionaryOrValue])
         }]
         set isBoolean [expr {
             ($schema in {"" "boolean"}) &&

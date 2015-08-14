@@ -165,7 +165,10 @@ test json \
         ::json::stringify {key1 {0 a 1 b}} 1 {key1 {0 boolean}}
     }]
 
-    assert-all-equal [::json::stringify {} 1 ""] {}
+    assert-all-equal [::json::stringify {} 1 ""] {""}
+    assert-all-equal [::json::stringify {} 1 string] {""}
+    assert-all-equal [::json::stringify {key {}} 1 ""] {{"key": ""}}
+    assert-all-equal [::json::stringify {0 {} 1 {}} 1 ""] {["", ""]}
     assert-all-equal [::json::stringify {} 1 array] {[]}
     assert-all-equal [::json::stringify {} 1 object] "{}"
     assert-all-equal \
