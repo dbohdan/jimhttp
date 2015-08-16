@@ -64,50 +64,54 @@ test json \
         object {Tokyo 37.8 Seoul 25.62 Shanghai 24.75}
     }]
 
-    assert-all-equal [::json::decode-string {"ab\nc\"de"}] [list "ab\nc\"de" {}]
-    assert-all-equal [::json::decode-string {"a" b c}] [list "a" { b c}]
+    assert-all-equal [::json::tokenize {"a"}] [list [list STRING a]]
+    assert-all-equal [::json::tokenize {"ab\nc\"de"}] \
+            [list [list STRING ab\nc\"de]]
 
-    assert-all-equal [::json::decode-number {0}] [list 0 {}]
-    assert-all-equal [::json::decode-number {0.}] [list 0. {}]
-    assert-all-equal [::json::decode-number {-0.1234567890}] \
-            [list -0.1234567890 {}]
-    assert-all-equal [::json::decode-number {-525}] [list -525 {}]
-    assert-all-equal [::json::decode-number {1E100}] [list 1E100 {}]
-    assert-all-equal [::json::decode-number {1.23e-99}] [list 1.23e-99 {}]
-    assert-all-equal [::json::decode-number {1.23e-99, 0, 0}] \
-            [list 1.23e-99 {, 0, 0}]
+    assert-all-equal [::json::tokenize {0}] [list [list NUMBER 0]]
+    assert-all-equal [::json::tokenize {0.}] [list [list NUMBER 0.]]
+    assert-all-equal [::json::tokenize {-0.1234567890}] \
+            [list [list NUMBER -0.1234567890]]
+    assert-all-equal [::json::tokenize {-525}] [list [list NUMBER -525]]
+    assert-all-equal [::json::tokenize {1E100}] [list [list NUMBER 1E100]]
+    assert-all-equal [::json::tokenize {1.23e-99}] [list [list NUMBER 1.23e-99]]
+    assert-all-equal [::json::tokenize {1.23e-99, 0, 0}] [list \
+            [list NUMBER 1.23e-99] COMMA \
+            [list NUMBER 0] COMMA \
+            [list NUMBER 0]]
 
-    assert-all-equal [::json::decode-value "true"] [list "true" {}]
-    assert-all-equal [::json::decode-value "false"] [list "false" {}]
-    assert-all-equal [::json::decode-value "null"] [list "null" {}]
+    assert-all-equal [::json::tokenize true] [list [list RAW true]]
+    assert-all-equal [::json::tokenize false] [list [list RAW false]]
+    assert-all-equal [::json::tokenize null] [list [list RAW null]]
 
-    assert-all-equal [::json::decode-array {[1.23e-99, 0, 0]}] \
-            [list {1.23e-99 0 0} {}]
-    assert-all-equal [::json::decode-array {[ 1.23e-99,    0,     0 ]}] \
-            [list {1.23e-99 0 0} {}]
-    assert-all-equal [::json::decode-array {[1.23e-99, "a", [1,2,3]]}] \
-            [list {1.23e-99 a {1 2 3}} {}]
-    assert-all-equal [::json::decode-array {["alpha", "beta", "gamma"]} 0] \
-            [list {alpha beta gamma} {}]
-    assert-all-equal [::json::decode-array {["alpha", "beta", "gamma"]} 1] \
-            [list {0 alpha 1 beta 2 gamma} {}]
-    assert-all-equal [::json::decode-array {[true,     false,null ]} 1] \
-            [list {0 true 1 false 2 null} {}]
-    assert-all-equal [::json::decode-array {[]} 1] \
-            [list {} {}]
+    assert-all-equal [::json::parse {[1.23e-99, 0, 0]}] \
+            [list 1.23e-99 0 0]
+    assert-all-equal [::json::parse {[ 1.23e-99,    0,     0 ]}] \
+            [list 1.23e-99 0 0]
+    assert-all-equal [::json::parse {[1.23e-99, "a", [1,2,3]]}] \
+            [list 1.23e-99 a {1 2 3}]
+    assert-all-equal [::json::parse {["alpha", "beta", "gamma"]} 0] \
+            [list alpha beta gamma]
+    assert-all-equal [::json::parse {["alpha", "beta", "gamma"]} 1] \
+            [list 0 alpha 1 beta 2 gamma]
+    assert-all-equal [::json::parse {[true,     false,null ]} 1] \
+            [list 0 true 1 false 2 null]
+    assert-all-equal [::json::parse {[]} 1] \
+            [list]
 
 
-    assert-all-equal [::json::decode-object {{"key": "value"}}] \
-            [list {key value} {}]
+    assert-all-equal [::json::parse {{"key": "value"}}] \
+            [list key value]
     assert-all-equal \
-            [::json::decode-object {{    "key"   :        "value"    }}] \
-            [list {key value} {}]
-    assert-all-equal [::json::decode-object {{"key": [1, 2, 3]}}] \
-            [list {key {1 2 3}} {}]
+            [::json::parse {{    "key"   :        "value"    }}] \
+            [list key value]
+    assert-all-equal [::json::parse {{"key": [1, 2, 3]}}] \
+            [list key {1 2 3}]
     assert-all-equal \
-            [::json::decode-object {{"k1": true, "k2": false, "k3": null}}] \
-            [list {k1 true k2 false k3 null} {}]
-    assert-all-equal [::json::decode-object {{}}] [list {} {}]
+            [::json::parse {{"k1": true, "k2": false, "k3": null}}] \
+            [list k1 true k2 false k3 null]
+    assert-all-equal [::json::parse {{}}] [list]
+    assert-all-equal [::json::parse {[]         }] [list]
 
     assert-all-equal [::json::parse [::json::stringify $d 1] 1] $d
 

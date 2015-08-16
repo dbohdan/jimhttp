@@ -6,18 +6,19 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 1.2.0
+    variable version 1.3.0
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
 # numberDictArrays: decode arrays as dictionaries with sequential integers
 # starting with zero as keys; otherwise decode them as lists.
 proc ::json::parse {str {numberDictArrays 0}} {
-    set result [::json::decode-value $str $numberDictArrays]
-    if {[lindex $result 1] eq ""} {
+    set tokens [::json::tokenize $str]
+    set result [::json::decode $tokens $numberDictArrays]
+    if {[lindex $result 1] == [llength $tokens]} {
         return [lindex $result 0]
     } else {
-        error "trailing garbage after JSON data: $str"
+        error "trailing garbage after JSON data in [list $str]"
     }
 }
 
@@ -40,8 +41,6 @@ proc ::json::parse {str {numberDictArrays 0}} {
 # compact: no decorative whitespace.
 proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
         {strictSchema 0} {compact 0}} {
-    set result {}
-
     lassign [::json::array-schema $schema] schemaArray _
     lassign [::json::object-schema $schema] schemaObject _
 
@@ -51,30 +50,24 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
 
     if {([llength $dictionaryOrValue] <= 1) &&
             !$schemaArray && !$schemaObject} {
-        # Value.
-        set isNumber [expr {
-            ($schema in {"" "number"}) &&
-            ([string is integer -strict $dictionaryOrValue] ||
-                    [string is double -strict $dictionaryOrValue])
-        }]
-        set isBoolean [expr {
-            ($schema in {"" "boolean"}) &&
-            ($dictionaryOrValue in {"true" "false" 0 1})
-        }]
-        set isNull [expr {
-            ($schema in {"" "null"}) &&
-            ($dictionaryOrValue eq "null")
-        }]
-
-        if {$isNumber || $isBoolean || $isNull} {
-            # Map 0/1 values explicitly marked as boolean to false/true.
-            if {($schema eq "boolean") && ($dictionaryOrValue in {0 1})} {
-                set dictionaryOrValue \
-                        [string map {0 false 1 true} $dictionaryOrValue]
-            }
-            set result $dictionaryOrValue
+        if {
+                ($schema in {"" "number"}) &&
+                ([string is integer -strict $dictionaryOrValue] ||
+                        [string is double -strict $dictionaryOrValue])
+        } {
+            return $dictionaryOrValue
+        } elseif {
+                ($schema in {"" "boolean"}) &&
+                ($dictionaryOrValue in {"true" "false" 0 1})
+        } {
+            return [string map {0 false 1 true} $dictionaryOrValue]
+        } elseif {
+                ($schema in {"" "null"}) &&
+                ($dictionaryOrValue eq "null")
+        } {
+            return $dictionaryOrValue
         } elseif {$schema eq ""} {
-            set result "\"$dictionaryOrValue\""
+            return "\"$dictionaryOrValue\""
         } else {
             error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
         }
@@ -91,16 +84,16 @@ proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
         }]
 
         if {$isArray} {
-            set result [::json::stringify-array $dictionaryOrValue \
+            return [::json::stringify-array $dictionaryOrValue \
                     $numberDictArrays $schema $strictSchema $compact]
         } elseif {$validDict} {
-            set result [::json::stringify-object $dictionaryOrValue \
+            return [::json::stringify-object $dictionaryOrValue \
                     $numberDictArrays $schema $strictSchema $compact]
         } else {
             error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
         }
     }
-    return $result
+    error {this should not be reached}
 }
 
 # A convenience wrapper for ::json::stringify with named parameters.
@@ -110,8 +103,8 @@ proc ::json::stringify2 {dictionaryOrValue args} {
     set strictSchema [::json::get-arg $args -strictSchema 0]
     set compact [::json::get-arg $args -compact 0]
 
-    ::json::stringify \
-            $dictionaryOrValue $numberDictArrays $schema $strictSchema $compact
+    return [::json::stringify \
+            $dictionaryOrValue $numberDictArrays $schema $strictSchema $compact]
 }
 
 ### The private API: can change at any time.
@@ -148,11 +141,9 @@ proc ::json::object-schema {schema {numberDictArrays 1}} {
 
 # Return 1 if the keys in dictionary are numbers 0, 1, 2... and 0 otherwise.
 proc ::json::number-dict? {dictionary} {
-    set allNumericKeys 1
     set i 0
-    foreach {key value} $dictionary {
-        set allNumericKeys [expr { $allNumericKeys && ($key == $i) }]
-        if {!$allNumericKeys} {
+    foreach {key _} $dictionary {
+        if {$key != $i} {
             return 0
         }
         incr i
@@ -170,7 +161,7 @@ proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
         if {$strictSchema} {
             error "missing schema for key \"$key\""
         } else {
-            set valueSchema ""
+            set valueSchema {}
         }
     }
 }
@@ -178,7 +169,7 @@ proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
 proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
         {strictSchema 0} {compact 0}} {
     set arrayElements {}
-    lassign [array-schema $schema] schemaArray subschema
+    lassign [json::array-schema $schema] schemaArray subschema
 
     if {$numberDictArrays} {
         foreach {key value} $array {
@@ -206,13 +197,13 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
     } else {
         set elementSeparator {, }
     }
-    set result "\[[join $arrayElements $elementSeparator]\]"
+    return "\[[join $arrayElements $elementSeparator]\]"
 }
 
 proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
         {strictSchema 0} {compact 0}} {
     set objectDict {}
-    lassign [object-schema $schema] schemaObject subschema
+    lassign [::json::object-schema $schema] schemaObject subschema
 
     if {$compact} {
         set elementSeparator ,
@@ -226,166 +217,227 @@ proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
         if {($schema eq "") || $schemaObject} {
             set valueSchema $subschema
         } else {
-                set valueSchema [::json::get-schema-by-key \
-                        $schema $key $strictSchema]
+            set valueSchema [::json::get-schema-by-key \
+                    $schema $key $strictSchema]
         }
         lappend objectDict "\"$key\"$keyValueSeparator[::json::stringify \
                 $value $numberDictArrays $valueSchema $strictSchema $compact]"
     }
 
-    set result "{[join $objectDict $elementSeparator]}"
+    return "{[join $objectDict $elementSeparator]}"
 }
 
 ## Procedures used by ::json::parse.
 
-# Choose how to decode a JSON value. Return a list consisting of the result of
-# parsing the initial part of $str and the remainder of $str that was not
-# parsed. E.g., ::json::decode-value {"string", 55} returns {{string} {, 55}}.
-proc ::json::decode-value {str {numberDictArrays 0}} {
-    set str [string trimleft $str]
-    switch -regexp -- $str {
-        {^\"} {
-            return [::json::decode-string $str]
+# Returns a list consisting of two elements: the decoded value and a number
+# indicating how many tokens from $tokens were consumed to obtain that value.
+proc ::json::decode {tokens numberDictArrays} {
+    set tokensConsumed 0
+    set nextToken [list {} {
+        uplevel 1 {
+            set token [lindex $tokens 0]
+            set tokens [lrange $tokens 1 end]
+            lassign $token type arg
+            incr tokensConsumed
         }
-        {^[0-9-]} {
-            return [::json::decode-number $str]
+    }]
+    set errorMessage [list message {
+        upvar 1 tokens tokens
+        if {[llength $tokens] > 0} {
+            set max 5
+            set context [lrange $tokens 0 $max-1]
+            if {[llength $tokens] >= $max} {
+                lappend context ...
+            }
+            append message " before $context"
+        } else {
+            append message " at the end of the token list"
         }
-        {^\{} {
-            return [::json::decode-object $str $numberDictArrays]
-        }
-        {^\[} {
-            return [::json::decode-array $str $numberDictArrays]
-        }
-        {^(true|false|null)} {
-            return [::json::decode-boolean-or-null $str]
-        }
-        default {
-            error "cannot decode value as JSON: \"$str\""
-        }
-    }
-}
+        uplevel 1 [list error $message]
+    }]
 
-# Return a list of two elements: the initial part of $str parsed as "true",
-# "false" or "null" and the remainder of $str that wasn't parsed.
-proc ::json::decode-boolean-or-null {str} {
-    regexp {^(true|false|null)} $str value
-    return [list $value [string range $str [string length $value] end]]
-}
+    apply $nextToken
 
-# Return a list of two elements: the initial part of $str parsed as a JSON
-# string and the remainder of $str that wasn't parsed.
-proc ::json::decode-string {str} {
-    if {[regexp {^"((?:[^"\\]|\\.)*)"} $str _ result]} {
-        return [list \
-                [subst -nocommands -novariables $result] \
-                [string range $str [expr {2 + [string length $result]}] end]]
-                # Add two to result length to account for the double quotes
-                # around the string.
+    if {$type in {STRING NUMBER RAW}} {
+        return [list $arg $tokensConsumed]
+    } elseif {$type eq "OPEN_CURLY"} {
+        # Object.
+        set object {}
+        set first 1
+
+        while 1 {
+            apply $nextToken
+
+            if {$type eq "CLOSE_CURLY"} {
+                return [list $object $tokensConsumed]
+            }
+
+            if {!$first} {
+                if {$type eq "COMMA"} {
+                    apply $nextToken
+                } else {
+                    apply $errorMessage "object expected a comma, got $token"
+                }
+            }
+
+            if {$type eq "STRING"} {
+                set key $arg
+            } else {
+                apply $errorMessage "wrong key for object: $token"
+            }
+
+            apply $nextToken
+
+            if {$type ne "COLON"} {
+                apply $errorMessage "object expected a colon, got $token"
+            }
+
+            lassign [::json::decode $tokens $numberDictArrays] \
+                    value tokensInValue
+            lappend object $key $value
+            set tokens [lrange $tokens $tokensInValue end]
+            incr tokensConsumed $tokensInValue
+
+            set first 0
+        }
+    } elseif {$type eq "OPEN_BRACKET"} {
+        # Array.
+        set array {}
+        set i 0
+
+        while 1 {
+            apply $nextToken
+
+            if {$type eq "CLOSE_BRACKET"} {
+                return [list $array $tokensConsumed]
+            }
+
+            if {$i > 0} {
+                if {$type eq "COMMA"} {
+                    apply $nextToken
+                } else {
+                    apply $errorMessage "array expected a comma, got $token"
+                }
+            }
+
+            # Put the last token back into the token list for recursive
+            # decoding.
+            set tokens [list $token {*}$tokens]
+            incr tokensConsumed -1
+
+            lassign [::json::decode $tokens $numberDictArrays] \
+                    value tokensInValue
+            if {$numberDictArrays} {
+                lappend array $i $value
+            } else {
+                lappend array $value
+            }
+            set tokens [lrange $tokens $tokensInValue end]
+            incr tokensConsumed $tokensInValue
+
+            incr i
+        }
     } else {
-        error "can't parse JSON string: $str"
+        if {$token eq ""} {
+            apply $errorMessage "missing token"
+        } else {
+            apply $errorMessage "can't parse $token"
+        }
+    }
+
+    error {this should not be reached}
+}
+
+# Transform a JSON blob into a list of tokens.
+proc ::json::tokenize json {
+    if {$json eq {}} {
+        error {empty JSON input}
+    }
+
+    set tokens {}
+    while {$json ne {}} {
+        set char [string index $json 0]
+        switch -exact -- $char {
+            \" {
+                set value [::json::analyze-string $json]
+                lappend tokens \
+                        [list STRING [subst -nocommand -novariables $value]]
+
+                set json [string range $json [string length $value]+2 end]
+            }
+            \{ {
+                lappend tokens OPEN_CURLY
+                set json [string range $json 1 end]
+            }
+            \} {
+                lappend tokens CLOSE_CURLY
+                set json [string range $json 1 end]
+            }
+            \[ {
+                lappend tokens OPEN_BRACKET
+                set json [string range $json 1 end]
+            }
+            \] {
+                lappend tokens CLOSE_BRACKET
+                set json [string range $json 1 end]
+            }
+            , {
+                lappend tokens COMMA
+                set json [string range $json 1 end]
+            }
+            : {
+                lappend tokens COLON
+                set json [string range $json 1 end]
+            }
+            { } {
+                set json [string trimleft $json]
+            }
+            default {
+                if {$char in {- 0 1 2 3 4 5 6 7 8 9}} {
+                    set value [::json::analyze-number $json]
+                    lappend tokens [list NUMBER $value]
+
+                    set json [string range $json [string length $value] end]
+                } elseif {$char in {t f n}} {
+                    set value [::json::analyze-boolean-or-null $json]
+                    lappend tokens [list RAW $value]
+
+                    set json [string range $json [string length $value] end]
+                } else {
+                    error "can't tokenize value as JSON: [list $json]"
+                }
+            }
+        }
+    }
+    return $tokens
+}
+
+# Return the beginning of $str parsed as "true", "false" or "null".
+proc ::json::analyze-boolean-or-null str {
+    regexp {^(true|false|null)} $str value
+    if {![info exists value]} {
+        error "can't parse value as JSON true/false/null: [list $str]"
+    }
+    return $value
+}
+
+# Return the beginning of $str parsed as a JSON string.
+proc ::json::analyze-string str {
+    if {[regexp {^"((?:[^"\\]|\\.)*)"} $str _ result]} {
+        return $result
+    } else {
+        error "can't parse JSON string: [list $str]"
     }
 }
 
-# Return a list of two elements: the initial part of $str parsed as a JSON
-# number and the remainder of $str that wasn't parsed.
-proc ::json::decode-number {str} {
+# Return $str parsed as a JSON number.
+proc ::json::analyze-number str {
     if {[regexp -- {^-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(:?(?:e|E)[+-]?[0-9]*)?} \
             $str result]} {
         #            [][ integer part  ][ optional  ][  optional exponent  ]
         #            ^ sign             [ frac. part]
-        return [list $result [string range $str [string length $result] end]]
+        return $result
     } else {
-        error "can't parse JSON number: $str"
+        error "can't parse JSON number: [list $str]"
     }
-}
-
-# Return a list of two elements: the initial part of $str parsed as a JSON array
-# and the remainder of $str that wasn't parsed. Arrays are parsed into
-# dictionaries with numbers {0 1 2 ...} as keys if $numberDictArrays is true
-# or lists if it is false. E.g., if $numberDictArrays == 1 then
-# ["Hello, World" 2048] is converted to {0 {Hello, World!} 1 2048}; otherwise
-# it is converted to {{Hello, World!} 2048}.
-proc ::json::decode-array {str {numberDictArrays 0}} {
-    set strInitial $str
-    set result {}
-    set value {}
-    set i 0
-    if {[string index $str 0] ne "\["} {
-        error "can't parse JSON array: $strInitial"
-    } else {
-        set str [string range $str 1 end]
-    }
-    while 1 {
-        # Empty array => break out of the loop.
-        if {[string index [string trimleft $str] 0] eq "\]"} {
-            set str [string range [string trimleft $str] 1 end]
-            break
-        }
-
-        # Value.
-        lassign [::json::decode-value $str $numberDictArrays] value str
-        set str [string trimleft $str]
-        if {$numberDictArrays} {
-            lappend result $i
-        }
-        lappend result $value
-
-        # ","
-        set sep [string index $str 0]
-        set str [string range $str 1 end]
-        if {$sep eq "\]"} {
-            break
-        } elseif {$sep ne ","} {
-            error "can't parse JSON array: $strInitial"
-        }
-        incr i
-    }
-    return [list $result $str]
-}
-
-# Return a list of two elements: the initial part of $str parsed as a JSON
-# object and the remainder of $str that wasn't parsed.
-proc ::json::decode-object {str {numberDictArrays 0}} {
-    set strInitial $str
-    set result {}
-    set value {}
-    if {[string index $str 0] ne "\{"} {
-        error "can't parse JSON object: $strInitial"
-    } else {
-        set str [string range $str 1 end]
-    }
-    while 1 {
-        # Key string.
-        set str [string trimleft $str]
-        # Empty object => break out of the loop.
-        if {[string index $str 0] eq "\}"} {
-            set str [string range $str 1 end]
-            break
-        }
-        lassign [::json::decode-string $str] value str
-        set str [string trimleft $str]
-        lappend result $value
-
-        # ":"
-        set sep [string index $str 0]
-        set str [string range $str 1 end]
-        if {$sep ne ":"} {
-            error "can't parse JSON object: $strInitial"
-        }
-
-        # Value.
-        lassign [::json::decode-value $str $numberDictArrays] value str
-        set str [string trimleft $str]
-        lappend result $value
-
-        # ","
-        set sep [string index $str 0]
-        set str [string range $str 1 end]
-        if {$sep eq "\}"} {
-            break
-        } elseif {$sep ne ","} {
-            error "can't parse JSON object: $str"
-        }
-    }
-    return [list $result $str]
 }
