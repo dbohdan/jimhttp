@@ -5,5 +5,8 @@ addons:
     packages:
       - libsqlite3-dev
 install:
-- ./vagrant/install-jimtcl.sh
-script: ./tests.tcl
+  - ./vagrant/install-jimtcl.sh
+before_script:
+  - export PATH="$PATH:$PWD/jimtcl"
+script:
+  - ./tests.tcl
