@@ -1,4 +1,9 @@
 language: c
+sudo: false
+addons:
+  apt:
+    packages:
+      - libsqlite3-dev
 install:
-- sudo ./vagrant/install-jimtcl.sh
+- ./vagrant/install-jimtcl.sh
 script: ./tests.tcl
