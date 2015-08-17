@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 1.3.0
+    variable version 1.3.1
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
@@ -355,54 +355,50 @@ proc ::json::tokenize json {
     }
 
     set tokens {}
-    while {$json ne {}} {
-        set char [string index $json 0]
+    for {set i 0} {$i < [string length $json]} {incr i} {
+        set char [string index $json $i]
         switch -exact -- $char {
             \" {
-                set value [::json::analyze-string $json]
+                set value [::json::analyze-string [string range $json $i end]]
                 lappend tokens \
                         [list STRING [subst -nocommand -novariables $value]]
 
-                set json [string range $json [string length $value]+2 end]
+                incr i [string length $value]
+                incr i ;# For the closing quote.
             }
             \{ {
                 lappend tokens OPEN_CURLY
-                set json [string range $json 1 end]
             }
             \} {
                 lappend tokens CLOSE_CURLY
-                set json [string range $json 1 end]
             }
             \[ {
                 lappend tokens OPEN_BRACKET
-                set json [string range $json 1 end]
             }
             \] {
                 lappend tokens CLOSE_BRACKET
-                set json [string range $json 1 end]
             }
             , {
                 lappend tokens COMMA
-                set json [string range $json 1 end]
             }
             : {
                 lappend tokens COLON
-                set json [string range $json 1 end]
             }
             { } {
-                set json [string trimleft $json]
             }
             default {
                 if {$char in {- 0 1 2 3 4 5 6 7 8 9}} {
-                    set value [::json::analyze-number $json]
+                    set value [::json::analyze-number \
+                            [string range $json $i end]]
                     lappend tokens [list NUMBER $value]
 
-                    set json [string range $json [string length $value] end]
+                    incr i [expr {[string length $value] - 1}]
                 } elseif {$char in {t f n}} {
-                    set value [::json::analyze-boolean-or-null $json]
+                    set value [::json::analyze-boolean-or-null \
+                            [string range $json $i end]]
                     lappend tokens [list RAW $value]
 
-                    set json [string range $json [string length $value] end]
+                    incr i [expr {[string length $value] - 1}]
                 } else {
                     error "can't tokenize value as JSON: [list $json]"
                 }
