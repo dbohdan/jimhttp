@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 1.3.2
+    variable version 1.3.3
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
@@ -231,22 +231,22 @@ proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
 
 # Returns a list consisting of two elements: the decoded value and a number
 # indicating how many tokens from $tokens were consumed to obtain that value.
-proc ::json::decode {tokens numberDictArrays} {
-    set tokensConsumed 0
+proc ::json::decode {tokens numberDictArrays {startingOffset 0}} {
+    set i $startingOffset
     set nextToken [list {} {
         uplevel 1 {
-            set token [lindex $tokens 0]
-            set tokens [lrange $tokens 1 end]
+            set token [lindex $tokens $i]
             lassign $token type arg
-            incr tokensConsumed
+            incr i
         }
     }]
     set errorMessage [list message {
         upvar 1 tokens tokens
-        if {[llength $tokens] > 0} {
+        upvar 1 i i
+        if {[llength $tokens] - $i > 0} {
             set max 5
-            set context [lrange $tokens 0 $max-1]
-            if {[llength $tokens] >= $max} {
+            set context [lrange $tokens $i [expr {$i + $max - 1}]]
+            if {[llength $tokens] - $i >= $max} {
                 lappend context ...
             }
             append message " before $context"
@@ -259,7 +259,7 @@ proc ::json::decode {tokens numberDictArrays} {
     apply $nextToken
 
     if {$type in {STRING NUMBER RAW}} {
-        return [list $arg $tokensConsumed]
+        return [list $arg [expr {$i - $startingOffset}]]
     } elseif {$type eq "OPEN_CURLY"} {
         # Object.
         set object {}
@@ -269,7 +269,7 @@ proc ::json::decode {tokens numberDictArrays} {
             apply $nextToken
 
             if {$type eq "CLOSE_CURLY"} {
-                return [list $object $tokensConsumed]
+                return [list $object [expr {$i - $startingOffset}]]
             }
 
             if {!$first} {
@@ -292,27 +292,26 @@ proc ::json::decode {tokens numberDictArrays} {
                 apply $errorMessage "object expected a colon, got $token"
             }
 
-            lassign [::json::decode $tokens $numberDictArrays] \
+            lassign [::json::decode $tokens $numberDictArrays $i] \
                     value tokensInValue
             lappend object $key $value
-            set tokens [lrange $tokens $tokensInValue end]
-            incr tokensConsumed $tokensInValue
+            incr i $tokensInValue
 
             set first 0
         }
     } elseif {$type eq "OPEN_BRACKET"} {
         # Array.
         set array {}
-        set i 0
+        set j 0
 
         while 1 {
             apply $nextToken
 
             if {$type eq "CLOSE_BRACKET"} {
-                return [list $array $tokensConsumed]
+                return [list $array [expr {$i - $startingOffset}]]
             }
 
-            if {$i > 0} {
+            if {$j > 0} {
                 if {$type eq "COMMA"} {
                     apply $nextToken
                 } else {
@@ -320,22 +319,19 @@ proc ::json::decode {tokens numberDictArrays} {
                 }
             }
 
-            # Put the last token back into the token list for recursive
-            # decoding.
-            set tokens [list $token {*}$tokens]
-            incr tokensConsumed -1
+            # Use the last token as part of the value for recursive decoding.
+            incr i -1
 
-            lassign [::json::decode $tokens $numberDictArrays] \
+            lassign [::json::decode $tokens $numberDictArrays $i] \
                     value tokensInValue
             if {$numberDictArrays} {
-                lappend array $i $value
+                lappend array $j $value
             } else {
                 lappend array $value
             }
-            set tokens [lrange $tokens $tokensInValue end]
-            incr tokensConsumed $tokensInValue
+            incr i $tokensInValue
 
-            incr i
+            incr j
         }
     } else {
         if {$token eq ""} {

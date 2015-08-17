@@ -27,8 +27,8 @@ unless indicated otherwise.
 
 2\. Schemas define data types. See the example below.
 
-3\. **Warning:** parsing is currently very slow. The
-[jq module](http://wiki.tcl.tk/11630) provides fast JSON parsing in Jim Tcl
+3\. **Warning:** parsing is currently slow. The
+[jq module](http://wiki.tcl.tk/11630) provides faster JSON parsing in Jim Tcl
 through an external binary.
 
 4\. Only the compatible components are tested in Tcl 8.5/8.6.
