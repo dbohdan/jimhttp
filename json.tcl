@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 1.3.1
+    variable version 1.3.2
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
@@ -384,8 +384,10 @@ proc ::json::tokenize json {
             : {
                 lappend tokens COLON
             }
-            { } {
-            }
+            { } {}
+            \t {}
+            \n {}
+            \r {}
             default {
                 if {$char in {- 0 1 2 3 4 5 6 7 8 9}} {
                     set value [::json::analyze-number \

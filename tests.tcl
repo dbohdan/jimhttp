@@ -105,6 +105,8 @@ test json \
     assert-all-equal \
             [::json::parse {{    "key"   :        "value"    }}] \
             [list key value]
+    assert-all-equal [::json::parse "\t{\t \"key\"\t:    \n\"value\"\n\r}"] \
+            [list key value]
     assert-all-equal [::json::parse {{"key": [1, 2, 3]}}] \
             [list key {1 2 3}]
     assert-all-equal \
