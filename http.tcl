@@ -2,7 +2,7 @@
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
 namespace eval ::http {
-    variable version 0.11.2
+    variable version 0.12.0
 }
 
 source mime.tcl
@@ -386,7 +386,7 @@ proc ::http::serve {channel clientAddr clientPort routes} {
 
     if {!$error} {
         ::http::log info "Responding."
-        puts -nonewline $channel [::http::route $request $routes]
+        ::http::route $channel $request $routes
     } else {
         puts -nonewline $channel [::http::error-response $error]
     }
@@ -409,9 +409,9 @@ proc ::http::start-server {ipAddress port} {
     ::http::log info "The server has shut down."
 }
 
-# Call route handler for the request url if available and return its result.
-# Otherwise return a 404 error message.
-proc ::http::route {request routes} {
+# Call route handler for the request url if available and pass $channel to it.
+# Otherwise write a 404 error message to the channel.
+proc ::http::route {channel request routes} {
     # Don't show the contents of large files in the debug message.
     if {[dict exists $request files] &&
                 [string length $request(files)] > 8*1024} {
@@ -432,10 +432,9 @@ proc ::http::route {request routes} {
             [dict keys $routes($request(method))] $url]
     if {$matchResult != 0} {
         set procName [dict get $routes $request(method) [lindex $matchResult 0]]
-        set result [$procName $request [lindex $matchResult 1]]
-        return $result
+        $procName $channel $request [lindex $matchResult 1]
     } else {
-        return [::http::error-response 404]
+        puts -nonewline $channel [::http::error-response 404]
     }
 }
 
@@ -472,7 +471,7 @@ proc ::http::add-handler {methods routes {statics {}} script} {
     global ::http::routes
 
     set procName "handler::${methods}::${routes}"
-    proc $procName {request routeVars} $statics $script
+    proc $procName {channel request routeVars} $statics $script
     foreach method $methods {
         foreach route $routes {
             dict set ::http::routes $method $route $procName
@@ -496,6 +495,13 @@ proc ::http::add-static-file {route {filename {}}} {
         set filename [file tail $route]
     }
     ::http::add-handler GET $route [format {
-        ::http::make-response [::http::read-file %s] {contentType %s}
+        puts -nonewline $channel \
+                [::http::make-response [::http::read-file %s] {contentType %s}]
     } $filename [::mime::type $filename]]
+}
+
+# A convenience procedure to use from route handlers.
+proc ::http::respond {response} {
+    upvar 1 channel channel
+    puts -nonewline $channel $response
 }
