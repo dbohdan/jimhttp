@@ -15,7 +15,7 @@ source template.tcl
 # An example of the HTML DSL from html.tcl. It also provides links to
 # other examples.
 ::http::add-handler GET / {
-    return [::http::make-response \
+    ::http::respond [::http::make-response \
             [html "" \n \
                 [form {action /form method POST} \n \
                     [h1 "Hello"] [br] \n \
@@ -44,11 +44,11 @@ source template.tcl
 ::http::add-handler {GET POST} /form {
     if {[dict exists $request formPost name] && \
             [dict exists $request formPost message]} {
-        return [::http::make-response [format {You (%s) said:<br>%s} \
+        ::http::respond [::http::make-response [format {You (%s) said:<br>%s} \
                 [::html::escape [dict get $request formPost name]] \
                 [::html::escape [dict get $request formPost message]]]]
     } else {
-        return [::http::make-response \
+        ::http::respond [::http::make-response \
                 "Please fill in the form at [a {href /} /]."]
     }
 }
@@ -57,7 +57,7 @@ source template.tcl
 ::http::add-handler GET /quit {
     global ::http::done
     set ::http::done 1
-    return [::http::make-response "Bye!"]
+    ::http::respond [::http::make-response "Bye!"]
 }
 
 # Process route variables. Their values are available to the handler script
@@ -68,19 +68,20 @@ source template.tcl
         append response " from $routeVars(town)"
     }
     append response !
-    return [::http::make-response $response]
+    ::http::respond [::http::make-response $response]
 }
 
 # Table generation using html.tcl.
 ::http::add-handler GET /table {
-    return [::http::make-response [::html::make-table {{a b} {1 2} {3 4}} 1]]
+    ::http::respond \
+            [::http::make-response [::html::make-table {{a b} {1 2} {3 4}} 1]]
 }
 
 # Static variables in a handler.
 ::http::add-handler GET /counter {{counter 0}} {
     incr counter
 
-    return [::http::make-response $counter]
+    ::http::respond [::http::make-response $counter]
 }
 
 # Persistent storage.
@@ -90,12 +91,12 @@ source template.tcl
     incr counter
 
     ::storage::persist-statics
-    return [::http::make-response $counter]
+    ::http::respond [::http::make-response $counter]
 }
 
 # AJAX requests.
 ::http::add-handler GET /ajax {
-    return [::http::make-response {
+    ::http::respond [::http::make-response {
         <!DOCTYPE html>
         <html>
         <body>
@@ -119,7 +120,7 @@ source template.tcl
 
 # HTML templates.
 ::http::add-handler GET /template {
-    return [::http::make-response [eval [::template::parse {
+    ::http::respond [::http::make-response [eval [::template::parse {
         <!DOCTYPE html>
         <html>
         <body>
@@ -139,14 +140,14 @@ source template.tcl
 ::http::add-handler {GET POST} /file-echo {
     if {($request(method) eq "POST") &&
             [dict exists $request files testfile content]} {
-        return [::http::make-response \
+        ::http::respond [::http::make-response \
                 [dict get $request files testfile content] \
                         [list contentType \
                                 [mime::type \
                                         [dict get $request \
                                                 files testfile filename]]]]
     } else {
-        return [::http::make-response \
+        ::http::respond [::http::make-response \
                 [html "" \n \
                     [form {action /file-echo method POST
                             enctype {multipart/form-data}} \n \
@@ -161,16 +162,20 @@ source template.tcl
     if {$request(method) eq "POST"} {
         set error [catch {set result [::json::parse $request(formPost) 1]}]
         if {!$error} {
-            return [::http::make-response "Decoded JSON:\n[list $result]\n" \
+            ::http::respond [::http::make-response \
+                    "Decoded JSON:\n[list $result]\n" \
                     {contentType text/plain}]
         } else {
-            return [::http::error-response 400 "<p>Couldn't parse JSON.</p>"]
+            ::http::respond [::http::error-response \
+                    400 \
+                    "<p>Couldn't parse JSON.</p>"]
         }
     } else {
-        return [::http::make-response [::json::stringify [dict create {*}{
+        set json [dict create {*}{
             objectSample {Tokyo 37.8 Seoul 25.62 Shanghai 24.75}
             arraySample {0 Tokyo 1 Seoul 2 Shanghai}
-        }] 1]]
+        }]
+        ::http::respond [::http::make-response [::json::stringify $json 1]]
     }
 }
 
@@ -184,7 +189,7 @@ source template.tcl
         append cookieTable [tr "" [td $name] [td $value]]
     }
 
-    return [::http::make-response [html [body [table $cookieTable]]] {
+    ::http::respond [::http::make-response [html [body [table $cookieTable]]] {
         cookies {
             {name alpha value {cookie 1} maxAge 360}
             {name beta value {cookie 2} expires 1727946435 httpOnly 1}
