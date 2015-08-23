@@ -41,7 +41,7 @@ through an external binary.
 source http.tcl
 
 ::http::add-handler GET /hello/:name/:town {
-    return [::http::make-response \
+    ::http::respond [::http::make-response \
             "Hello, $routeVars(name) from $routeVars(town)!"]
 }
 
@@ -60,7 +60,7 @@ source storage.tcl
     incr counter
 
     ::storage::persist-statics
-    return [::http::make-response $counter]
+    ::http::respond [::http::make-response $counter]
 }
 
 ::storage::init
