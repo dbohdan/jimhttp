@@ -2,7 +2,7 @@
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
 namespace eval ::http {
-    variable version 0.12.0
+    variable version 0.12.1
 }
 
 source mime.tcl
@@ -139,7 +139,7 @@ proc ::http::string-pop {stringVarName separator} {
         set str [string range $str $substrLength+[string length $separator] end]
     } else {
         set substr $str
-        set str ""
+        set str {}
     }
     return $substr
 }
@@ -234,12 +234,12 @@ proc ::http::parse-multipart-data {postString contentType newline} {
         error {no boundary specified in Content-Type}
     }
     set boundaryLength [string length $boundary]
-    while {[set part [string-pop postString $boundary]] ne ""} {
+    while {[set part [string-pop postString $boundary]] ne {}} {
         set partHeader [::http::parse-headers \
                 [split [string-pop part "$newline$newline"] $newline]]
         # Trim "(\r)\n--" in content.
         set part [string range $part 0 end-[string length "$newline--"]]
-        if {$part ne ""} {
+        if {$part ne {}} {
             set m [::http::parse-value $partHeader(contentDisposition)]
             if {[dict exists $m form-data] &&
                         [dict exists $m name]} {
@@ -309,7 +309,7 @@ proc ::http::serve {channel clientAddr clientPort routes} {
         if {$newline eq "\r\n"} {
             set buf [string trimright $buf \r]
         }
-        if {$buf eq ""} {
+        if {$buf eq {}} {
             break
         }
         lappend headerLines $buf
@@ -424,7 +424,7 @@ proc ::http::route {channel request routes} {
     }
 
     set url [dict get $request url]
-    if {$url eq ""} {
+    if {$url eq {}} {
         set url /
     }
 
@@ -491,12 +491,14 @@ proc ::http::read-file {filename} {
 # Add handler to return the contents of a static file. The file is either
 # $filename or [file tail $route] if no filename is given.
 proc ::http::add-static-file {route {filename {}}} {
-    if {$filename eq ""} {
+    if {$filename eq {}} {
         set filename [file tail $route]
     }
-    ::http::add-handler GET $route [format {
+    ::http::add-handler GET $route [list apply {filename mimeType} {
         puts -nonewline $channel \
-                [::http::make-response [::http::read-file %s] {contentType %s}]
+                [::http::make-response \
+                        [::http::read-file $filename] \
+                        [list contentType $mimeType]]
     } $filename [::mime::type $filename]]
 }
 
