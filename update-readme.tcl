@@ -20,7 +20,7 @@ proc get-component-version filename {
     set sourceCode [read-file $filename]
     if {![regexp {variable version ([0-9]+\.[0-9]+\.[0-9]+)} $sourceCode \
             _ version]} {
-        set version -
+        set version —
     }
     return $version
 }
@@ -29,7 +29,7 @@ set updatedReadme {}
 foreach line [split [read-file README.md] \n] {
     if {[regexp {\| \[([a-z]+.tcl)\]\([a-z]+.tcl\)} $line _ filename]} {
         set row [split $line |]
-        lset row 2 " [get-component-version $filename] "
+        lset row 3 " [get-component-version $filename] "
         lappend updatedReadme [join $row |]
     } else {
         lappend updatedReadme $line

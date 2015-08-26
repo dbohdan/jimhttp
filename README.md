@@ -7,25 +7,24 @@ generation and parsing, an HTML DSL and persistent storage powered by SQLite3.
 # Components
 
 The components listed below work in Tcl 8.5, Tcl 8.6 and Jim Tcl 0.76 or later
-unless indicated otherwise.
+unless indicated otherwise. Each component is versioned separately. Component
+version numbers follow [semantic
+versioning](http://semver.org/spec/v2.0.0.html). A major version number &ge; 1
+indicates a stable API.
 
-Each component is versioned separately. Component version numbers follow
-[semantic versioning](http://semver.org/spec/v2.0.0.html). A major version
-number &ge; 1 indicates a stable API.
-
-| Filename | Version | Function |
-|----------|---------|----------|
-| [arguments.tcl](arguments.tcl) | 1.0.0 | Command line argument parsing. |
-| [example.tcl](example.tcl)&#x200A;<sup>1</sup> | - | A sample web server that demonstrates the use of the other components. |
-| [entities.tcl](entities.tcl) | 1.0.0 | A dictionary mapping characters to HTML entities. |
-| [html.tcl](html.tcl) | 0.2.0 | A DSL for HTML generation. Requires entities.tcl. |
-| [http.tcl](http.tcl)&#x200A;<sup>1</sup> | 0.12.1 | The titular web microframework. Requires mime.tcl |
-| [json.tcl](json.tcl) | 1.3.3 | JSON generation with schema support&#x200A;<sup>2</sup>. JSON parsing&#x200A;<sup>3</sup>. |
-| [mime.tcl](mime.tcl) | 1.2.0 | Rudimentary MIME type detection based on the file extension. |
-| [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | 0.1.0 | SQLite persistence of static variables. |
-| [template.tcl](template.tcl) | 1.0.0 | [tmpl_parser](http://wiki.tcl.tk/20363) templating. |
-| [testing.tcl](testing.tcl) | 0.1.0 | A test framework with support for tcltest-style constraints. |
-| [tests.tcl](tests.tcl) | - | Tests for other components.&#x200A;<sup>4</sup> |
+| Filename | Function | Version |
+|----------|----------|---------|
+| [arguments.tcl](arguments.tcl) | Command line argument parsing. | 1.0.0 |
+| [example.tcl](example.tcl)&#x200A;<sup>1</sup> | A sample web server that demonstrates the use of the other components. | — |
+| [entities.tcl](entities.tcl) | A dictionary mapping characters to HTML entities. | 1.0.0 |
+| [html.tcl](html.tcl) | A DSL for HTML generation. Requires entities.tcl. | 0.2.0 |
+| [http.tcl](http.tcl)&#x200A;<sup>1</sup> | The titular web microframework. Requires mime.tcl | 0.12.1 |
+| [json.tcl](json.tcl) | JSON generation with schema support.&#x200A;<sup>2</sup> JSON parsing.&#x200A;<sup>3</sup> | 1.3.3 |
+| [mime.tcl](mime.tcl) | Rudimentary MIME type detection based on the file extension. | 1.2.0 |
+| [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | SQLite persistence of static variables. | 0.1.0 |
+| [template.tcl](template.tcl) | [tmpl_parser](http://wiki.tcl.tk/20363) templating. | 1.0.0 |
+| [testing.tcl](testing.tcl) | A test framework with support for tcltest-style constraints. | 0.1.0 |
+| [tests.tcl](tests.tcl) | Tests for other components.&#x200A;<sup>4</sup> | — |
 
 1\. Jim Tcl-only.
 
