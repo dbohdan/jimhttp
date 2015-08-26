@@ -1,4 +1,0 @@
-Each component is versioned separately. Version X.Y.Z where X >= 1 indicates a
-stable API.
-
-To find out the versions of all components run ./versions.sh.
