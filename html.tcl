@@ -4,7 +4,7 @@
 
 # HTML entities processing code based on http://wiki.tcl.tk/26403.
 namespace eval ::html {
-    variable version 0.2.0
+    variable version 0.2.1
 }
 
 source entities.tcl
@@ -65,7 +65,7 @@ proc ::html::make-tags {tagList {withContent 1}} {
 }
 
 # Here we actually create the tag procs.
-::html::make-tags {head title body table td tr th ul li a div pre form \
+::html::make-tags {head title body table td tr th ul li a div pre p form \
         textarea h1 h2 h3 h4 h5 b i u s tt} 1
 ::html::make-tags {input submit br hr} 0
 # Create the html tag proc as a special case.
