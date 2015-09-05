@@ -4,13 +4,12 @@
 namespace eval ::http {
     source mime.tcl
 
-    variable version 0.13.0
+    variable version 0.14.0
 
     variable verbosity 0
     variable crashOnError 0
     variable maxRequestLength [expr 16*1024*1024]
     variable routes {}
-    variable routeOptions {}
     # A lambda run by ::http::serve before any communication with the client
     # happens over a newly established connection's channel. Use
     # [upvar 1 channel channel] to access the channel from the lambda.
@@ -266,7 +265,7 @@ proc ::http::error-response {code {customMessage ""}} {
 proc ::http::serve-and-trap-errors {channel clientAddr clientPort} {
     set error [catch {
         ::http::serve $channel $clientAddr $clientPort
-    } errorMessage]
+    } errorMessage errorOptions]
     if {$error} {
         ::http::log critical \
                 "Unhandled ::http::serve error: $errorMessage."
@@ -380,14 +379,19 @@ proc ::http::serve {channel clientAddr clientPort} {
         ::http::log debug "cookies: $request(cookies)"
     }
 
+
     if {!$error} {
         ::http::log info "Responding."
-        ::http::route $channel $request
+        set matchResult [::http::route $channel $request]
+        lassign $matchResult route
+        if {$matchResult eq {0} ||
+                [dict get $::http::routes $route $request(method) close]} {
+            close $channel
+        }
     } else {
         puts -nonewline $channel [::http::error-response $error]
+        close $channel
     }
-
-    close $channel
 }
 
 # Start the HTTP server binding it to $ipAddress and $port.
@@ -422,14 +426,16 @@ proc ::http::route {channel request} {
     }
 
     set matchResult [::http::match-route \
-            [dict keys $::http::routes($request(method))] $url]
+            [dict keys $::http::routes] $url]
     if {$matchResult != 0} {
-        set procName [dict get $::http::routes $request(method) \
-                [lindex $matchResult 0]]
+        set procName [dict get $::http::routes \
+                [lindex $matchResult 0] $request(method) handler]
         $procName $channel $request [lindex $matchResult 1]
     } else {
         puts -nonewline $channel [::http::error-response 404]
     }
+
+    return $matchResult
 }
 
 # Return route variables contained in the url if it can be parsed as route
@@ -466,7 +472,8 @@ proc ::http::add-handler {methods routes {statics {}} script} {
     proc $procName {channel request routeVars} $statics $script
     foreach method $methods {
         foreach route $routes {
-            dict set ::http::routes $method $route $procName
+            dict set ::http::routes $route $method handler $procName
+            dict set ::http::routes $route $method close 1
         }
     }
 }

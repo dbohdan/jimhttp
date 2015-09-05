@@ -28,6 +28,7 @@ source template.tcl
                     [li [a {href "/counter"} /counter]] \n \
                     [li [a {href "/counter-persistent"} \
                             /counter-persistent]] \n \
+                    [li [a {href "/delay"} /delay]] \n \
                     [li [a {href "/file-echo"} \
                             /file-echo]] \n \
                     [li [a {href "/hello/John"} /hello/John]] \n \
@@ -197,6 +198,17 @@ source template.tcl
     }]
 }
 
+# Keeping the channel open. We get a connection and respond later.
+::http::add-handler GET /delay {
+    after 25 [list apply {{channel t1} {
+        set message "You waited $([clock milliseconds] - $t1) milliseconds\
+                for your response."
+        ::http::respond [::http::make-response \
+                [html [body {} [p $message]]]]
+        close $channel
+    }} $channel [clock milliseconds]]
+}
+dict set ::http::routes /delay GET close 0
 
 # Static file.
 ::http::add-static-file /static.jpg

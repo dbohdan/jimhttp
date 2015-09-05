@@ -287,6 +287,7 @@ test example \
 <li><a href="/cookie">/cookie</a></li>
 <li><a href="/counter">/counter</a></li>
 <li><a href="/counter-persistent">/counter-persistent</a></li>
+<li><a href="/delay">/delay</a></li>
 <li><a href="/file-echo">/file-echo</a></li>
 <li><a href="/hello/John">/hello/John</a></li>
 <li><a href="/hello/John/Smallville">/hello/John/Smallville</a></li>
@@ -310,6 +311,9 @@ test example \
 
             # Static file handler test.
             test-url $url/static.jpg
+
+            # Keeping the channel open.
+            test-url $url/delay
 
             # Binary file corruption test.
             set tempFile1 /tmp/jimhttp.test
