@@ -308,11 +308,14 @@ test example \
                     {<h1>Error 404: Not Found</h1> }
             assert-all-equal [test-url $url] $index
 
+            # Static file handler test.
+            test-url $url/static.jpg
+
             # Binary file corruption test.
             set tempFile1 /tmp/jimhttp.test
             set tempFile2 /tmp/jimhttp.test.echo
             exec dd if=/dev/urandom of=$tempFile1 bs=1024 count=1024
-            exec curl -o "$tempFile2" -X POST -F "testfile=@$tempFile1" \
+            test-url -o "$tempFile2" -X POST -F "testfile=@$tempFile1" \
                     $url/file-echo
             set fileContents1 [::http::read-file $tempFile1]
             set fileContents2 [::http::read-file $tempFile2]

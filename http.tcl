@@ -2,70 +2,73 @@
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
 namespace eval ::http {
-    variable version 0.12.1
+    source mime.tcl
+
+    variable version 0.13.0
+
+    variable verbosity 0
+    variable crashOnError 0
+    variable maxRequestLength [expr 16*1024*1024]
+    variable routes {}
+    variable routeOptions {}
+    # A lambda run by ::http::serve before any communication with the client
+    # happens over a newly established connection's channel. Use
+    # [upvar 1 channel channel] to access the channel from the lambda.
+    variable newConnectionLambda {{} {}}
+
+    variable statusCodePhrases [dict create {*}{
+        100 Continue
+        200 OK
+        201 {Created}
+        301 {Moved Permanently}
+        400 {Bad Request}
+        401 {Unauthorized}
+        403 {Forbidden}
+        404 {Not Found}
+        405 {Method Not Allowed}
+        413 {Request Entity Too Large}
+        500 {Internal Server Error}
+    }]
+
+    variable requestFormat [dict create {*}{
+        Accept:                 accept
+        Accept-Charset:         acceptCharset
+        Accept-Encoding:        acceptEncoding
+        Accept-Language:        acceptLanguage
+        Connection:             connection
+        Content-Disposition:    contentDisposition
+        Content-Length:         contentLength
+        Content-Type:           contentType
+        Cookie:                 cookie
+        Expect:                 expect
+        Host:                   host
+        Referer:                referer
+        User-Agent:             userAgent
+    }]
+
+    variable cookieFields [dict create {*}{
+        Domain                  domain
+        Path                    path
+        Expires                 expires
+        Max-Age                 maxAge
+        Secure                  secure
+        HttpOnly                httpOnly
+    }]
+    variable cookieFieldsInv [lreverse $::http::cookieFields]
+    variable cookieDateFormat {%a, %d-%b-%Y %H:%M:%S GMT}
+
+    variable requestFormatLowerCase {}
+    foreach {key value} $requestFormat {
+        dict set requestFormatLowerCase [string tolower $key] $value
+    }
+
+    variable methods [list {*}{
+        OPTIONS GET HEAD POST PUT DELETE TRACE CONNECT
+    }]
 }
 
-source mime.tcl
-
-set ::http::verbosity 0
-set ::http::crashOnError 0
-set ::http::maxRequestLength [expr 16*1024*1024]
-set ::http::routes {}
-
-set ::http::statusCodePhrases [dict create {*}{
-    100 Continue
-    200 OK
-    201 {Created}
-    301 {Moved Permanently}
-    400 {Bad Request}
-    401 {Unauthorized}
-    403 {Forbidden}
-    404 {Not Found}
-    405 {Method Not Allowed}
-    413 {Request Entity Too Large}
-    500 {Internal Server Error}
-}]
-
-set ::http::requestFormat [dict create {*}{
-    Accept:                 accept
-    Accept-Charset:         acceptCharset
-    Accept-Encoding:        acceptEncoding
-    Accept-Language:        acceptLanguage
-    Connection:             connection
-    Content-Disposition:    contentDisposition
-    Content-Length:         contentLength
-    Content-Type:           contentType
-    Cookie:                 cookie
-    Expect:                 expect
-    Host:                   host
-    Referer:                referer
-    User-Agent:             userAgent
-}]
-
-set ::http::cookieFields [dict create {*}{
-    Domain                  domain
-    Path                    path
-    Expires                 expires
-    Max-Age                 maxAge
-    Secure                  secure
-    HttpOnly                httpOnly
-}]
-set ::http::cookieFieldsInv [lreverse $::http::cookieFields]
-set ::http::cookieDateFormat {%a, %d-%b-%Y %H:%M:%S GMT}
-
-set ::http::requestFormatLowerCase {}
-foreach {key value} $::http::requestFormat {
-    dict set ::http::requestFormatLowerCase [string tolower $key] $value
-}
-
-set ::http::methods [list {*}{
-    OPTIONS GET HEAD POST PUT DELETE TRACE CONNECT
-}]
-
-# Return the text of an HTTP response with body $body.
+# Return the text of an HTTP response with the body $body.
 proc ::http::make-response {body {headers {}}} {
-    global ::http::statusCodePhrases
-
     set ::http::responseTemplate \
         {HTTP/1.1 $headers(code) $::http::statusCodePhrases($headers(code))
 Content-Type: $headers(contentType)
@@ -95,7 +98,6 @@ proc ::http::log {level message} \
         [list [list levelNumber [dict create {*}{
             debug 3 info 2 warning 1 error 0 critical -1
         }]]] {
-    global ::http::verbosity
     set levelNumber
 
     if {$levelNumber($level) <= $::http::verbosity} {
@@ -148,9 +150,6 @@ proc ::http::string-pop {stringVarName separator} {
 # {{name somecookie value "some value" expires 1727946435 domain foo path /
 # secure 0 httpOnly 1} ...} into an HTTP header Set-Cookie value.
 proc ::http::make-cookie cookieDict {
-    global ::http::cookieFieldsInv
-    global ::http::cookieDateFormat
-
     set result {}
     append result "$cookieDict(name)=$cookieDict(value)"
     dict unset cookieDict name
@@ -177,9 +176,6 @@ proc ::http::make-cookie cookieDict {
 
 # Parse HTTP request headers presented as a list of lines into a dict.
 proc ::http::parse-headers {headerLines} {
-    global ::http::requestFormatLowerCase
-    global ::http::methods
-
     set headers {}
     set field {}
     set value {}
@@ -260,7 +256,6 @@ proc ::http::parse-multipart-data {postString contentType newline} {
 
 # Return error responses.
 proc ::http::error-response {code {customMessage ""}} {
-    global ::http::statusCodePhrases
     return [::http::make-response \
             "<h1>Error $code: $::http::statusCodePhrases($code)</h1>\
                     $customMessage" \
@@ -268,15 +263,14 @@ proc ::http::error-response {code {customMessage ""}} {
 }
 
 # Call ::http::serve. Catch and report any unhandled errors.
-proc ::http::serve-and-trap-errors {channel clientAddr clientPort routes} {
+proc ::http::serve-and-trap-errors {channel clientAddr clientPort} {
     set error [catch {
-        ::http::serve $channel $clientAddr $clientPort $routes
+        ::http::serve $channel $clientAddr $clientPort
     } errorMessage]
     if {$error} {
         ::http::log critical \
                 "Unhandled ::http::serve error: $errorMessage."
         catch {close $channel}
-        global ::http::crashOnError
         if {$::http::crashOnError} {
             ::http::log info "Exiting due to error."
             exit 1
@@ -286,8 +280,10 @@ proc ::http::serve-and-trap-errors {channel clientAddr clientPort routes} {
 
 # Handle HTTP requests over a channel and send responses. A hacky HTTP
 # implementation.
-proc ::http::serve {channel clientAddr clientPort routes} {
-    global ::http::maxRequestLength
+proc ::http::serve {channel clientAddr clientPort} {
+    # "Preprocess" the channel before anything else is done with it, e.g., to
+    # initiate a TLS connection.
+    apply $::http::newConnectionLambda
 
     ::http::log info "Client connected: $clientAddr"
 
@@ -386,7 +382,7 @@ proc ::http::serve {channel clientAddr clientPort routes} {
 
     if {!$error} {
         ::http::log info "Responding."
-        ::http::route $channel $request $routes
+        ::http::route $channel $request
     } else {
         puts -nonewline $channel [::http::error-response $error]
     }
@@ -396,13 +392,10 @@ proc ::http::serve {channel clientAddr clientPort routes} {
 
 # Start the HTTP server binding it to $ipAddress and $port.
 proc ::http::start-server {ipAddress port} {
-    global ::http::serverSocket
-    global ::http::done
-
     set ::http::serverSocket [socket stream.server $ipAddress:$port]
     $::http::serverSocket readable {
         set client [$::http::serverSocket accept addr]
-        ::http::serve-and-trap-errors $client {*}[split $addr :] $::http::routes
+        ::http::serve-and-trap-errors $client {*}[split $addr :]
     }
     ::http::log info "Started server on $ipAddress:$port."
     vwait ::http::done
@@ -411,7 +404,7 @@ proc ::http::start-server {ipAddress port} {
 
 # Call route handler for the request url if available and pass $channel to it.
 # Otherwise write a 404 error message to the channel.
-proc ::http::route {channel request routes} {
+proc ::http::route {channel request} {
     # Don't show the contents of large files in the debug message.
     if {[dict exists $request files] &&
                 [string length $request(files)] > 8*1024} {
@@ -429,9 +422,10 @@ proc ::http::route {channel request routes} {
     }
 
     set matchResult [::http::match-route \
-            [dict keys $routes($request(method))] $url]
+            [dict keys $::http::routes($request(method))] $url]
     if {$matchResult != 0} {
-        set procName [dict get $routes $request(method) [lindex $matchResult 0]]
+        set procName [dict get $::http::routes $request(method) \
+                [lindex $matchResult 0]]
         $procName $channel $request [lindex $matchResult 1]
     } else {
         puts -nonewline $channel [::http::error-response 404]
@@ -468,8 +462,6 @@ proc ::http::match-route {routeList url} {
 
 # Create a proc to handle the route $route with body $script.
 proc ::http::add-handler {methods routes {statics {}} script} {
-    global ::http::routes
-
     set procName "handler::${methods}::${routes}"
     proc $procName {channel request routeVars} $statics $script
     foreach method $methods {
@@ -494,12 +486,13 @@ proc ::http::add-static-file {route {filename {}}} {
     if {$filename eq {}} {
         set filename [file tail $route]
     }
-    ::http::add-handler GET $route [list apply {filename mimeType} {
+    ::http::add-handler GET $route [list apply {{filename mimeType} {
+        upvar 1 channel channel
         puts -nonewline $channel \
                 [::http::make-response \
                         [::http::read-file $filename] \
                         [list contentType $mimeType]]
-    } $filename [::mime::type $filename]]
+    }} $filename [::mime::type $filename]]
 }
 
 # A convenience procedure to use from route handlers.
