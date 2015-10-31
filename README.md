@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/dbohdan/jimhttp.svg)](https://travis-ci.org/dbohdan/jimhttp)
 
-A web microframework prototype for [Jim Tcl](http://jim.tcl.tk/). Provides a
-rough implementation of the HTTP protocol as well as routing, templates, JSON
+A web microframework prototype for [Jim Tcl](http://jim.tcl-lang.org/). Provides
+a rough implementation of the HTTP protocol as well as routing, templates, JSON
 generation and parsing, an HTML DSL and persistent storage powered by SQLite3.
 
 # Components
@@ -22,7 +22,7 @@ indicates an unstable API.
 | [json.tcl](json.tcl) | JSON generation with schema support.&#x200A;<sup>2</sup> JSON parsing.&#x200A;<sup>3</sup> | 1.3.3 |
 | [mime.tcl](mime.tcl) | Rudimentary MIME type detection based on the file extension. | 1.2.0 |
 | [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | SQLite persistence of static variables. | 0.1.0 |
-| [template.tcl](template.tcl) | [tmpl_parser](http://wiki.tcl.tk/20363) templating. | 1.0.0 |
+| [template.tcl](template.tcl) | [tmpl_parser](http://tcl.wiki/20363) templating. | 1.0.0 |
 | [testing.tcl](testing.tcl) | A test framework with support for tcltest-style constraints. | 0.1.0 |
 | [tests.tcl](tests.tcl) | Tests for other components.&#x200A;<sup>4</sup> | — |
 
@@ -31,7 +31,7 @@ indicates an unstable API.
 2\. Schemas define data types. See the example below.
 
 3\. **Warning:** parsing is currently slow. The
-[jq module](http://wiki.tcl.tk/11630) provides faster JSON parsing in Jim Tcl
+[jq module](http://tcl.wiki/11630) provides faster JSON parsing in Jim Tcl
 through an external binary.
 
 4\. Only the compatible components are tested in Tcl 8.5/8.6.

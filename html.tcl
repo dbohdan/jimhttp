@@ -2,11 +2,11 @@
 # Copyright (C) 2014, 2015 Danyil Bohdan.
 # License: MIT
 
-# HTML entities processing code based on http://wiki.tcl.tk/26403.
 namespace eval ::html {
     variable version 0.2.1
 }
 
+# HTML entities processing code based on http://tcl.wiki/26403.
 source entities.tcl
 
 set ::html::entitiesInverse [lreverse $::html::entities]

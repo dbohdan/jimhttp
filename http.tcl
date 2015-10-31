@@ -104,7 +104,7 @@ proc ::http::log {level message} \
     }
 }
 
-# From http://wiki.tcl.tk/14144.
+# From http://tcl.wiki/14144.
 proc ::http::uri-decode str {
     # rewrite "+" back to space
     # protect \ from quoting another '\'
