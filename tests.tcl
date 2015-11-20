@@ -325,7 +325,6 @@ test example \
             set fileContents1 [::http::read-file $tempFile1]
             set fileContents2 [::http::read-file $tempFile2]
 
-            # End file corruption test
             assert [list \
                     [string bytelength $fileContents1] == \
                     [string bytelength $fileContents2]] \
@@ -334,6 +333,7 @@ test example \
                     "file corruption test file contents"
             file delete $tempFile1
             file delete $tempFile2
+            # End file corruption test
         }
 
         try {
