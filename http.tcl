@@ -4,7 +4,7 @@
 namespace eval ::http {
     source mime.tcl
 
-    variable version 0.14.0
+    variable version 0.15.0
 
     variable verbosity 0
     variable crashOnError 0
@@ -64,10 +64,28 @@ namespace eval ::http {
     variable methods [list {*}{
         OPTIONS GET HEAD POST PUT DELETE TRACE CONNECT
     }]
+
+    # A list of lambdas. Each lambda takes a response body, a list of response
+    # headers and a list of request headers and return a list consisting of an
+    # updated response body and a list of updated response headers. Can be used
+    # to implement, e.g., compression. Applied in order.
+    variable responseFilters {}
+
+    # Sample filter. To active a filter add it to responseFilters.
+    variable sampleFilters {}
+    # Do GZip compression of the content using an external gzip binary.
+    dict set sampleFilters gzipExternal {{body responseHeaders request} {
+        if {[dict exists $request acceptEncoding] &&
+                [string match *gzip* $request(acceptEncoding)]} {
+            dict set responseHeaders contentEncoding gzip
+            set body [exec gzip << $body]
+        }
+        return [list $body $responseHeaders]
+    }}
 }
 
 # Return the text of an HTTP response with the body $body.
-proc ::http::make-response {body {headers {}}} {
+proc ::http::make-response {body {headers {}} {request {}}} {
     set ::http::responseTemplate \
         {HTTP/1.1 $headers(code) $::http::statusCodePhrases($headers(code))
 Content-Type: $headers(contentType)
@@ -79,14 +97,27 @@ Content-Length: $length}
     }]
 
     set headers [dict merge $::http::headerDefaults $headers]
+
+    # Handle response processing, e.g., compression.
+    foreach lambda $::http::responseFilters {
+        lassign [apply $lambda $body $headers $request] body headers
+    }
+
     set length [string bytelength $body]
 
     set response [subst $::http::responseTemplate]
+
+    # TODO: Generalize for other possible fields in the headers.
     if {[dict exists $headers cookies]} {
         foreach cookie $headers(cookies) {
             append response "\nSet-Cookie: [::http::make-cookie $cookie]"
         }
     }
+    if {[dict exists $headers contentEncoding]} {
+        append response \
+                "\nContent-Encoding: [dict get $headers contentEncoding]"
+    }
+
     append response "\n\n$body"
     return $response
 }
@@ -254,11 +285,12 @@ proc ::http::parse-multipart-data {postString contentType newline} {
 }
 
 # Return error responses.
-proc ::http::error-response {code {customMessage ""}} {
+proc ::http::error-response {code {customMessage ""} {request {}}} {
     return [::http::make-response \
             "<h1>Error $code: $::http::statusCodePhrases($code)</h1>\
                     $customMessage" \
-            [list code $code]]
+            [list code $code] \
+            $request]
 }
 
 # Call ::http::serve. Catch and report any unhandled errors.
@@ -495,10 +527,12 @@ proc ::http::add-static-file {route {filename {}}} {
     }
     ::http::add-handler GET $route [list apply {{filename mimeType} {
         upvar 1 channel channel
+        upvar 1 request request
         puts -nonewline $channel \
                 [::http::make-response \
                         [::http::read-file $filename] \
-                        [list contentType $mimeType]]
+                        [list contentType $mimeType] \
+                        $request]
     }} $filename [::mime::type $filename]]
 }
 

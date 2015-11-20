@@ -38,7 +38,7 @@ source template.tcl
                     [li [a {href "/static.jpg"} /static.jpg]] \n \
                     [li [a {href "/table"} /table]] \n \
                     [li [a {href "/template"} /template]] \n \
-                    [li [a {href "/quit"} /quit]]]]]
+                    [li [a {href "/quit"} /quit]]]] {} $request]
 }
 
 # Process POST form data for the form at /.
@@ -46,11 +46,13 @@ source template.tcl
     if {[dict exists $request formPost name] && \
             [dict exists $request formPost message]} {
         ::http::respond [::http::make-response [format {You (%s) said:<br>%s} \
-                [::html::escape [dict get $request formPost name]] \
-                [::html::escape [dict get $request formPost message]]]]
+                    [::html::escape [dict get $request formPost name]] \
+                    [::html::escape [dict get $request formPost message]]] \
+                {} \
+                $request]
     } else {
         ::http::respond [::http::make-response \
-                "Please fill in the form at [a {href /} /]."]
+                "Please fill in the form at [a {href /} /]." {} $request]
     }
 }
 
@@ -58,7 +60,7 @@ source template.tcl
 ::http::add-handler GET /quit {
     global ::http::done
     set ::http::done 1
-    ::http::respond [::http::make-response "Bye!"]
+    ::http::respond [::http::make-response "Bye!" {} $request]
 }
 
 # Process route variables. Their values are available to the handler script
@@ -69,20 +71,21 @@ source template.tcl
         append response " from $routeVars(town)"
     }
     append response !
-    ::http::respond [::http::make-response $response]
+    ::http::respond [::http::make-response $response {} $request]
 }
 
 # Table generation using html.tcl.
 ::http::add-handler GET /table {
     ::http::respond \
-            [::http::make-response [::html::make-table {{a b} {1 2} {3 4}} 1]]
+            [::http::make-response [::html::make-table {{a b} {1 2} {3 4}} 1] \
+                    {} $request]
 }
 
 # Static variables in a handler.
 ::http::add-handler GET /counter {{counter 0}} {
     incr counter
 
-    ::http::respond [::http::make-response $counter]
+    ::http::respond [::http::make-response $counter {} $request]
 }
 
 # Persistent storage.
@@ -92,7 +95,7 @@ source template.tcl
     incr counter
 
     ::storage::persist-statics
-    ::http::respond [::http::make-response $counter]
+    ::http::respond [::http::make-response $counter {} $request]
 }
 
 # AJAX requests.
@@ -116,7 +119,7 @@ source template.tcl
             <button onclick="javascript:updateCounter();">Update</button>
         </body>
         </html>
-    }]
+    } {} $request]
 }
 
 # HTML templates.
@@ -134,7 +137,7 @@ source template.tcl
             </dl>
         </body>
         </html>
-    }]]]
+    }]] {} $request]
 }
 
 # File uploading. Sends the uploaded file back to the client.
@@ -154,7 +157,9 @@ source template.tcl
                             enctype {multipart/form-data}} \n \
                     [input {type hidden name test value blah}] \
                     [input {type file name testfile}] " " \
-                    [input {type submit}]]]]
+                    [input {type submit}]]]
+                {} \
+                $request]
     }
 }
 
@@ -165,18 +170,21 @@ source template.tcl
         if {!$error} {
             ::http::respond [::http::make-response \
                     "Decoded JSON:\n[list $result]\n" \
-                    {contentType text/plain}]
+                    {contentType text/plain} \
+                    $request]
         } else {
             ::http::respond [::http::error-response \
                     400 \
-                    "<p>Couldn't parse JSON.</p>"]
+                    "<p>Couldn't parse JSON.</p>" \
+                    $request]
         }
     } else {
         set json [dict create {*}{
             objectSample {Tokyo 37.8 Seoul 25.62 Shanghai 24.75}
             arraySample {0 Tokyo 1 Seoul 2 Shanghai}
         }]
-        ::http::respond [::http::make-response [::json::stringify $json 1]]
+        ::http::respond [::http::make-response \
+                [::json::stringify $json 1] {} $request]
     }
 }
 
@@ -190,23 +198,29 @@ source template.tcl
         append cookieTable [tr "" [td $name] [td $value]]
     }
 
-    ::http::respond [::http::make-response [html [body [table $cookieTable]]] {
-        cookies {
-            {name alpha value {cookie 1} maxAge 360}
-            {name beta value {cookie 2} expires 1727946435 httpOnly 1}
-        }
-    }]
+    ::http::respond [::http::make-response \
+            [html [body [table $cookieTable]]] \
+            {
+                cookies {
+                    {name alpha value {cookie 1} maxAge 360}
+                    {name beta value {cookie 2} expires 1727946435 httpOnly 1}
+                }
+            } \
+            $request]
 }
 
-# Keeping the channel open. We get a connection and respond later.
+# Keeping the channel open. We get a connection and respond later in an [after]
+# script.
 ::http::add-handler GET /delay {
-    after 25 [list apply {{channel t1} {
+    after 25 [list apply {{channel t1 request} {
         set message "You waited $([clock milliseconds] - $t1) milliseconds\
                 for your response."
         ::http::respond [::http::make-response \
-                [html [body {} [p $message]]]]
+                [html [body {} [p $message]]] \
+                {} \
+                $request]
         close $channel
-    }} $channel [clock milliseconds]]
+    }} $channel [clock milliseconds] $request]
 }
 dict set ::http::routes /delay GET close 0
 
