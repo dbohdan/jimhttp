@@ -224,6 +224,28 @@ source template.tcl
 }
 dict set ::http::routes /delay GET close 0
 
+# Activate or deactivate GZip compression of responses.
+::http::add-handler {GET POST} /compression {
+    set gzipFilter [dict get $::http::sampleFilters gzipExternal]
+
+    if {($request(method) eq {POST}) &&
+            [dict exists $request formPost enable]} {
+        if {[dict get $request formPost enable]} {
+            set ::http::responseFilters [list $gzipFilter]
+        } else {
+            set ::http::responseFilters {}
+        }
+    }
+
+    set enabled [expr {
+        $gzipFilter in $::http::responseFilters ? "on" : "off"
+    }]
+    ::http::respond [::http::make-response \
+            [html [body [h1 "Compression is $enabled"]]] \
+            {} \
+            $request]
+}
+
 # Static file.
 ::http::add-static-file /static.jpg
 

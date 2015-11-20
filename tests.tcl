@@ -267,7 +267,7 @@ test example \
     set curlAvailable [expr {![catch {exec curl -V}]}]
     if {$curlAvailable} {
         proc test-url args {
-            set result [exec curl -S {*}$args 2>/dev/null]
+            set result [exec curl --compressed -S {*}$args 2>/dev/null]
             return $result
         }
 
@@ -302,7 +302,8 @@ test example \
         # Wait until the server is ready to respond.
         $handle readable { set ::ready 1 }
         vwait ::ready
-        try {
+
+        proc test-server {url index} {
             assert-all-equal [test-url $url] $index
             assert-all-equal \
                     [test-url $url/does-not-exist] \
@@ -324,6 +325,7 @@ test example \
             set fileContents1 [::http::read-file $tempFile1]
             set fileContents2 [::http::read-file $tempFile2]
 
+            # End file corruption test
             assert [list \
                     [string bytelength $fileContents1] == \
                     [string bytelength $fileContents2]] \
@@ -332,8 +334,13 @@ test example \
                     "file corruption test file contents"
             file delete $tempFile1
             file delete $tempFile2
-            # End file corruption test
+        }
 
+        try {
+            test-server $url $index
+            test-url -X POST -d enable=1 $url/compression
+            exec curl --compressed -v $url |& grep {Content-Encoding: gzip}
+            test-server $url $index
             assert-all-equal [test-url $url/quit] {Bye!}
         } finally {
             kill $pid
