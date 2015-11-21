@@ -4,7 +4,7 @@
 namespace eval ::http {
     source mime.tcl
 
-    variable version 0.15.0
+    variable version 0.15.1
 
     variable verbosity 0
     variable crashOnError 0
@@ -71,14 +71,32 @@ namespace eval ::http {
     # to implement, e.g., compression. Applied in order.
     variable responseFilters {}
 
-    # Sample filter. To active a filter add it to responseFilters.
+    # Sample filters. To active a filter add it to responseFilters.
     variable sampleFilters {}
-    # Do GZip compression of the content using an external gzip binary.
+    # Perform GZip compression of the content using an external gzip binary.
     dict set sampleFilters gzipExternal {{body responseHeaders request} {
         if {[dict exists $request acceptEncoding] &&
                 [string match *gzip* $request(acceptEncoding)]} {
             dict set responseHeaders contentEncoding gzip
             set body [exec gzip << $body]
+        }
+        return [list $body $responseHeaders]
+    }}
+    # Perform GZip compression of the content using the zlib module.
+    dict set sampleFilters gzipInternal {{body responseHeaders request} {
+        if {[dict exists $request acceptEncoding] &&
+                [string match *gzip* $request(acceptEncoding)]} {
+            dict set responseHeaders contentEncoding gzip
+            set body [zlib gzip $body]
+        }
+        return [list $body $responseHeaders]
+    }}
+    # Perform Deflate compression of the content using the zlib module.
+    dict set sampleFilters deflateInternal {{body responseHeaders request} {
+        if {[dict exists $request acceptEncoding] &&
+                [string match *deflate* $request(acceptEncoding)]} {
+            dict set responseHeaders contentEncoding deflate
+            set body [zlib deflate $body]
         }
         return [list $body $responseHeaders]
     }}
