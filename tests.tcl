@@ -84,11 +84,11 @@ test json \
     assert-all-equal [::json::tokenize false] [list [list RAW false]]
     assert-all-equal [::json::tokenize null] [list [list RAW null]]
 
-    assert-all-equal [::json::parse {[1.23e-99, 0, 0]}] \
+    assert-all-equal [::json::parse {[1.23e-99, 0, 0]} 0] \
             [list 1.23e-99 0 0]
-    assert-all-equal [::json::parse {[ 1.23e-99,    0,     0 ]}] \
+    assert-all-equal [::json::parse {[ 1.23e-99,    0,     0 ]} 0] \
             [list 1.23e-99 0 0]
-    assert-all-equal [::json::parse {[1.23e-99, "a", [1,2,3]]}] \
+    assert-all-equal [::json::parse {[1.23e-99, "a", [1,2,3]]} 0] \
             [list 1.23e-99 a {1 2 3}]
     assert-all-equal [::json::parse {["alpha", "beta", "gamma"]} 0] \
             [list alpha beta gamma]
@@ -100,17 +100,17 @@ test json \
             [list]
 
 
-    assert-all-equal [::json::parse {{"key": "value"}}] \
+    assert-all-equal [::json::parse {{"key": "value"}} 0] \
             [list key value]
     assert-all-equal \
-            [::json::parse {{    "key"   :        "value"    }}] \
+            [::json::parse {{    "key"   :        "value"    }} 0] \
             [list key value]
-    assert-all-equal [::json::parse "\t{\t \"key\"\t:    \n\"value\"\n\r}"] \
+    assert-all-equal [::json::parse "\t{\t \"key\"\t:    \n\"value\"\n\r}" 0] \
             [list key value]
-    assert-all-equal [::json::parse {{"key": [1, 2, 3]}}] \
+    assert-all-equal [::json::parse {{"key": [1, 2, 3]}} 0] \
             [list key {1 2 3}]
     assert-all-equal \
-            [::json::parse {{"k1": true, "k2": false, "k3": null}}] \
+            [::json::parse {{"k1": true, "k2": false, "k3": null}} 0] \
             [list k1 true k2 false k3 null]
     assert-all-equal [::json::parse {{}}] [list]
     assert-all-equal [::json::parse {[]         }] [list]
@@ -182,6 +182,11 @@ test json \
                     {0 1 1 {0 1} 2 {0 x 1 null}} 1 \
                     {0 boolean 1 {0 boolean} 2 array}] \
             {[true, [true], ["x", null]]}
+    assert-all-equal \
+            [::json::stringify \
+                    {key1 1 key2 {0 1} key3 {0 x 1 null}} 1 \
+                    {0 boolean 1 {0 boolean} 2 array}] \
+            {{"key1": 1, "key2": [1], "key3": ["x", null]}}
 
     assert-all-equal \
             [::json::stringify {1 {key 1} 2 {x null} 3} 0 array] \
@@ -190,20 +195,22 @@ test json \
             [::json::stringify {1 {key 1} 2 {x null} 3} 0 string] \
             {"1 {key 1} 2 {x null} 3"}
     assert-all-equal \
-            [::json::stringify {1 {key 1} 2 {x null} 3} 0 array:string] \
+            [::json::stringify {1 {key 1} 2 {x null} 3} 0 \
+                    {string string string string string}] \
             {["1", "key 1", "2", "x null", "3"]}
     assert-all-equal \
-            [::json::stringify {1 {key 1} 2 {x null}} 0 object:string] \
-            {{"1": "key 1", "2": "x null"}}
-    assert-all-equal \
-            [::json::stringify {0 {key 1} 1 {x null}} 1 array:string] \
+            [::json::stringify {0 {key 1} 1 {x null}} 1 {N* string}] \
             {["key 1", "x null"]}
     assert-all-equal \
-            [::json::stringify {1 {key 1} 2 {x null}} 1 object:string] \
+            [::json::stringify {1 {key 1} 2 {x null}} 1 {* string}] \
             {{"1": "key 1", "2": "x null"}}
     assert-all-equal \
-            [::json::stringify {key {true false null}} 0 object:array:string] \
+            [::json::stringify {key {true false null}} 0 \
+                    {key {string string string}}]\
             {{"key": ["true", "false", "null"]}}
+    assert-all-equal \
+            [::json::stringify {0 {n 1 s 1}} 0 {0 {n number s string}}] \
+            {{"0": {"n": 1, "s": "1"}}}
 
     assert-all-equal \
             [::json::stringify2 {1 {key 1} 2 {x null} 3} \
@@ -214,31 +221,51 @@ test json \
     assert-all-equal \
             [::json::stringify2 {1 {key 1} 2 {x null} 3} \
                     -numberDictArrays 0 \
-                    -schema array:string \
+                    -schema {string string string string string} \
                     -compact 1] \
             {["1","key 1","2","x null","3"]}
     assert-all-equal \
+            [::json::stringify2 {1 {key 1} 2 {x null} 3 null} \
+                    -numberDictArrays 0 \
+                    -schema {string string string string string string} \
+                    -compact 1] \
+            {["1","key 1","2","x null","3","null"]}
+    assert-all-equal \
             [::json::stringify2 {1 {key 1} 2 {x null}} \
                     -numberDictArrays 0 \
-                    -schema object:string \
+                    -schema {1 string 2 string} \
                     -compact 1] \
             {{"1":"key 1","2":"x null"}}
     assert-all-equal \
             [::json::stringify2 {0 {key 1} 1 {x null}} \
-                    -schema array:string \
+                    -numberDictArrays 1 \
+                    -schema {N* string} \
                     -compact 1] \
             {["key 1","x null"]}
     assert-all-equal \
             [::json::stringify2 {1 {key 1} 2 {x null}} \
-                    -schema object:string \
+                    -numberDictArrays 0 \
+                    -schema {1 string 2 string} \
+                    -compact 1] \
+            {{"1":"key 1","2":"x null"}}
+    assert-all-equal \
+            [::json::stringify2 {1 {key 1} 2 {x null}} \
+                    -numberDictArrays 0 \
+                    -schema {* string} \
                     -compact 1] \
             {{"1":"key 1","2":"x null"}}
     assert-all-equal \
             [::json::stringify2 {key {true false null}} \
                     -numberDictArrays 0 \
-                    -schema object:array:string \
+                    -schema {key {string string string}} \
                     -compact 1] \
             {{"key":["true","false","null"]}}
+    assert-all-equal \
+            [::json::stringify2 {a 0 b 1 c 2} \
+                    -numberDictArrays 1 \
+                    -schema {* string c number} \
+                    -compact 1] \
+            {{"a":"0","b":"1","c":2}}
 }
 
 # arguments tests

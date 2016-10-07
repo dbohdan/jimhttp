@@ -6,13 +6,16 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 1.3.3
+    variable version 2.0.0
+
+    variable everyKey *
+    variable everyElement N*
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
 # numberDictArrays: decode arrays as dictionaries with sequential integers
 # starting with zero as keys; otherwise decode them as lists.
-proc ::json::parse {str {numberDictArrays 0}} {
+proc ::json::parse {str {numberDictArrays 1}} {
     set tokens [::json::tokenize $str]
     set result [::json::decode $tokens $numberDictArrays]
     if {[lindex $result 1] == [llength $tokens]} {
@@ -29,82 +32,97 @@ proc ::json::parse {str {numberDictArrays 0}} {
 # produce objects from all Tcl lists and dictionaries unless explicitly told
 # otherwise in the schema.
 #
-# schema: data types for values in $dictionaryOrValue. $schema consists of
-# nested dictionaries where the keys are either those in $dictionaryOrValue or
-# their superset and the values specify data types. Those values can each be
-# one of "array", "boolean", "null", "number", "object" or "string" as well as
-# "array:(element type)" and "object:(element type)".
+# schema: data types for the values in $data. $schema consists of lists and/or
+# dictionaries nested just the same as the data in $data. Each value in $schema
+# specifies the data type of the value in $data to which it corresponds. The
+# type can be one of "array", "boolean", "null", "number", "object" or "string".
+# The special dictionary key "*" sets the default data type for every value in
+# am object. The key "N*" does the same for the elements of an array.
 #
 # strictSchema: generate an error if there is no schema for a value in
-# $dictionaryOrValue.
+# $data.
 #
 # compact: no decorative whitespace.
-proc ::json::stringify {dictionaryOrValue {numberDictArrays 1} {schema ""}
+proc ::json::stringify {data {numberDictArrays 1} {schema ""}
         {strictSchema 0} {compact 0}} {
-    lassign [::json::array-schema $schema] schemaArray _
-    lassign [::json::object-schema $schema] schemaObject _
-
     if {$schema eq "string"} {
-        return "\"$dictionaryOrValue\""
+        return "\"$data\""
     }
 
-    if {([llength $dictionaryOrValue] <= 1) &&
-            !$schemaArray && !$schemaObject} {
+    set validDict [expr {
+        [llength $data] % 2 == 0
+    }]
+    set schemaValidDict [expr {
+        [llength $schema] % 2 == 0
+    }]
+
+    set schemaForceArray [expr {
+        ($schema eq "array") ||
+        ($numberDictArrays && $schemaValidDict &&
+                [dict exists $schema $::json::everyElement]) ||
+        (!$numberDictArrays && $validDict && $schemaValidDict &&
+                ([llength $schema] > 0) &&
+                ([dict keys $schema] ne [dict keys $data]))
+    }]
+    set schemaForceObject [expr {
+        ($schema eq "object") ||
+        ($schemaValidDict && [dict exists $schema $::json::everyKey])
+    }]
+    if {([llength $data] <= 1) &&
+            !$schemaForceArray && !$schemaForceObject} {
         if {
                 ($schema in {"" "number"}) &&
-                ([string is integer -strict $dictionaryOrValue] ||
-                        [string is double -strict $dictionaryOrValue])
+                ([string is integer -strict $data] ||
+                        [string is double -strict $data])
         } {
-            return $dictionaryOrValue
+            return $data
         } elseif {
                 ($schema in {"" "boolean"}) &&
-                ($dictionaryOrValue in {"true" "false" 0 1})
+                ($data in {"true" "false" 0 1})
         } {
-            return [string map {0 false 1 true} $dictionaryOrValue]
+            return [string map {0 false 1 true} $data]
         } elseif {
                 ($schema in {"" "null"}) &&
-                ($dictionaryOrValue eq "null")
+                ($data eq "null")
         } {
-            return $dictionaryOrValue
+            return $data
         } elseif {$schema eq ""} {
-            return "\"$dictionaryOrValue\""
+            return "\"$data\""
         } else {
-            error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
+            error "invalid schema \"$schema\" for value \"$data\""
         }
     } else {
         # Dictionary or list.
-        set validDict [expr { [llength $dictionaryOrValue] % 2 == 0 }]
         set isArray [expr {
-            ($numberDictArrays &&
-                    !$schemaObject &&
-                    $validDict &&
-                    [::json::number-dict? $dictionaryOrValue]) ||
-
-            (!$numberDictArrays && $schemaArray)
+            !$schemaForceObject &&
+            (($numberDictArrays && $validDict &&
+                            [::json::number-dict? $data]) ||
+                    (!$numberDictArrays && !$validDict) ||
+                    ($schemaForceArray && (!$numberDictArrays || $validDict)))
         }]
 
         if {$isArray} {
-            return [::json::stringify-array $dictionaryOrValue \
+            return [::json::stringify-array $data \
                     $numberDictArrays $schema $strictSchema $compact]
         } elseif {$validDict} {
-            return [::json::stringify-object $dictionaryOrValue \
+            return [::json::stringify-object $data \
                     $numberDictArrays $schema $strictSchema $compact]
         } else {
-            error "invalid schema \"$schema\" for value \"$dictionaryOrValue\""
+            error "invalid schema \"$schema\" for list \"$data\""
         }
     }
     error {this should not be reached}
 }
 
 # A convenience wrapper for ::json::stringify with named parameters.
-proc ::json::stringify2 {dictionaryOrValue args} {
+proc ::json::stringify2 {data args} {
     set numberDictArrays [::json::get-arg $args -numberDictArrays 1]
     set schema [::json::get-arg $args -schema {}]
     set strictSchema [::json::get-arg $args -strictSchema 0]
     set compact [::json::get-arg $args -compact 0]
 
     return [::json::stringify \
-            $dictionaryOrValue $numberDictArrays $schema $strictSchema $compact]
+            $data $numberDictArrays $schema $strictSchema $compact]
 }
 
 ### The private API: can change at any time.
@@ -122,22 +140,6 @@ proc ::json::get-arg {dictionary argument default} {
 }
 
 ## Procedures used by ::json::stringify.
-
-# Returns a list of two values: whether the $schema is a schema for an array and
-# the "subschema" after "array:", if any.
-proc ::json::array-schema {schema {numberDictArrays 1}} {
-    return [list [expr {
-        ($schema eq "array") || [string match "array:*" $schema]
-    }] [string range $schema 6 end]]
-}
-
-# Returns a list of two values: whether the $schema is a schema for an object
-# and the "subschema" after "object:", if any.
-proc ::json::object-schema {schema {numberDictArrays 1}} {
-    return [list [expr {
-        ($schema eq "object") || [string match "object:*" $schema]
-    }] [string range $schema 7 end]]
-}
 
 # Return 1 if the keys in dictionary are numbers 0, 1, 2... and 0 otherwise.
 proc ::json::number-dict? {dictionary} {
@@ -157,6 +159,10 @@ proc ::json::number-dict? {dictionary} {
 proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
     if {[dict exists $schema $key]} {
         set valueSchema [dict get $schema $key]
+    } elseif {[dict exists $schema $::json::everyKey]} {
+        set valueSchema [dict get $schema $::json::everyKey]
+    } elseif {[dict exists $schema $::json::everyElement]} {
+        set valueSchema [dict get $schema $::json::everyElement]
     } else {
         if {$strictSchema} {
             error "missing schema for key \"$key\""
@@ -169,12 +175,11 @@ proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
 proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
         {strictSchema 0} {compact 0}} {
     set arrayElements {}
-    lassign [json::array-schema $schema] schemaArray subschema
 
     if {$numberDictArrays} {
         foreach {key value} $array {
-            if {($schema eq "") || $schemaArray} {
-                set valueSchema $subschema
+            if {($schema eq "") || ($schema eq "array")} {
+                set valueSchema {}
             } else {
                 set valueSchema [::json::get-schema-by-key \
                         $schema $key $strictSchema]
@@ -184,8 +189,8 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
         }
     } else { ;# list arrays
         foreach value $array valueSchema $schema {
-            if {($schema eq "") || $schemaArray} {
-                set valueSchema $subschema
+            if {($schema eq "") || ($schema eq "array")} {
+                set valueSchema {}
             }
             lappend arrayElements [::json::stringify $value 0 \
                     $valueSchema $strictSchema $compact]
@@ -203,8 +208,6 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
 proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
         {strictSchema 0} {compact 0}} {
     set objectDict {}
-    lassign [::json::object-schema $schema] schemaObject subschema
-
     if {$compact} {
         set elementSeparator ,
         set keyValueSeparator :
@@ -214,11 +217,11 @@ proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
     }
 
     foreach {key value} $dictionary {
-        if {($schema eq "") || $schemaObject} {
-            set valueSchema $subschema
+        if {($schema eq "") || ($schema eq "object")} {
+            set valueSchema {}
         } else {
             set valueSchema [::json::get-schema-by-key \
-                    $schema $key $strictSchema]
+                $schema $key $strictSchema]
         }
         lappend objectDict "\"$key\"$keyValueSeparator[::json::stringify \
                 $value $numberDictArrays $valueSchema $strictSchema $compact]"
