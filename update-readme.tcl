@@ -1,6 +1,6 @@
 #!/usr/bin/env jimsh
 # Update jimhttp components' versions in README.md.
-# Copyright (C) 2015 Danyil Bohdan.
+# Copyright (C) 2015, 2016 dbohdan.
 # License: MIT
 
 proc read-file filename {

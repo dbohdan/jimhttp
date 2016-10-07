@@ -1,6 +1,6 @@
 #!/usr/bin/env jimsh
 # A test framework similar to tcltest.
-# Copyright (C) 2014, 2015 Danyil Bohdan.
+# Copyright (C) 2014, 2015, 2016 dbohdan.
 # License: MIT
 
 namespace eval ::testing {

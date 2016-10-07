@@ -1,5 +1,5 @@
 # MIME type detection by filename extension.
-# Copyright (C) 2014, 2015 Danyil Bohdan.
+# Copyright (C) 2014, 2015, 2016 dbohdan.
 # License: MIT
 
 namespace eval ::mime {
