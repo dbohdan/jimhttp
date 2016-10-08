@@ -4,7 +4,7 @@
 # License: MIT
 
 namespace eval ::testing {
-    variable version 0.1.0
+    variable version 0.2.0
 
     namespace export *
     variable tests {}
@@ -24,7 +24,7 @@ proc ::testing::assert {expression {message ""}} {
 }
 
 # Compare all args for equality.
-proc ::testing::assert-all-equal args {
+proc ::testing::assert-equal args {
     set firstArg [lindex $args 0]
     foreach arg [lrange $args 1 end] {
         assert [list \"$arg\" eq \"$firstArg\"]
