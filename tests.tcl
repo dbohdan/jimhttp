@@ -6,7 +6,7 @@
 source testing.tcl
 namespace import ::testing::*
 
-# http tests
+# http.tcl tests
 test http \
         -constraints jim \
         -body {
@@ -38,7 +38,7 @@ test http \
             }]
 }
 
-# html tests
+# html.tcl tests
 test html \
         -body {
     source html.tcl
@@ -54,7 +54,7 @@ test html \
     {<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>}
 }
 
-# json tests
+# json.tcl tests
 test json \
         -body {
     source json.tcl
@@ -297,7 +297,7 @@ test json \
     assert [catch {::json::stringify2 {a 0 b 1} -foo bar]}]
 }
 
-# arguments tests
+# arguments.tcl tests
 test arguments \
         -body {
     source arguments.tcl
@@ -402,6 +402,37 @@ test example \
             kill $pid
         }
     }
+}
+
+# storage.tcl tests
+test storage \
+        -constraints jim \
+        -body {
+    source storage.tcl
+
+    proc foo args {{a 555}} {
+        ::storage::restore-statics
+        incr a
+        ::storage::persist-statics
+        return $a
+    }
+    assert-equal [
+        try {
+            foo
+        } on error v {
+            lindex $v
+        }
+    ] {::storage::db isn't initialized}
+    ::storage::init :memory:
+    assert-equal [foo] 556
+    assert-equal [foo] 557
+    rename foo {}
+
+    set ::ns::bar 7890
+    ::storage::persist-var ::ns::bar
+    set ::ns::bar 0
+    ::storage::restore-var ::ns::bar
+    assert-equal $::ns::bar 7890
 }
 
 run-tests $argv

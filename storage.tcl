@@ -2,33 +2,30 @@
 # Copyright (C) 2014, 2015, 2016 dbohdan.
 # License: MIT
 namespace eval ::storage {
-    variable version 0.1.0
+    variable version 0.2.0
 }
 
-set ::storage::db {}
+set ::storage::db [proc ::storage::not-initialized args {
+    error {::storage::db isn't initialized}
+}]
 
 # Open the SQLite3 database in the file $filename. Create the table if needed.
 proc ::storage::init {{filename ""}} {
-    global ::storage::db
-
-    if {$filename eq  ""} {
-        set filename [file join [file dirname [info script]] "storage.sqlite3"]
+    if {$filename eq ""} {
+        set filename [file join [file dirname [info script]] storage.sqlite3]
     }
 
-    if {$::storage::db eq ""} {
-        set ::storage::db [sqlite3.open $filename]
-        $::storage::db query {
-            CREATE TABLE IF NOT EXISTS storage(
-                key TEXT PRIMARY KEY,
-                value TEXT
-            );
-        }
+    set ::storage::db [sqlite3.open $filename]
+    $::storage::db query {
+        CREATE TABLE IF NOT EXISTS storage(
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
     }
 }
 
 # Store $value under $key.
 proc ::storage::put {key value} {
-    global ::storage::db
     $::storage::db query {
         INSERT OR REPLACE INTO storage(key, value) VALUES ('%s', '%s');
     } $key $value
@@ -36,7 +33,7 @@ proc ::storage::put {key value} {
 
 # Return the value under $key or "" if it doesn't exist.
 proc ::storage::get {key} {
-    global ::storage::db
+
     # The return format of query is {{key value ...} ...}.
     lindex [lindex [$::storage::db query {
         SELECT value FROM storage WHERE key = '%s' LIMIT 1;
@@ -45,25 +42,22 @@ proc ::storage::get {key} {
 
 # Return 1 if a value exists under $key or 0 otherwise.
 proc ::storage::exists {key} {
-    global ::storage::db
     # The return format of query is {{key value ...} ...}.
     lindex [lindex [$::storage::db query {
         SELECT EXISTS(SELECT value FROM storage WHERE key = '%s' LIMIT 1);
     } $key] 0] 1
 }
 
-# Store the values of the global variables listed in varNameList.
-proc ::storage::persist-globals {varNameList} {
+# Store the values of the variables listed in varNameList.
+proc ::storage::persist-var {varNameList} {
     foreach varName $varNameList {
-        global $varName
-        ::storage::set $varName [set $varName]
+        ::storage::put $varName [set $varName]
     }
 }
 
-# Set the global variables listed in varNameList to their stored values.
-proc ::storage::restore-globals {varNameList} {
+# Set the variables listed in varNameList to their stored values.
+proc ::storage::restore-var {varNameList} {
     foreach varName $varNameList {
-        global $varName
         set $varName [::storage::get $varName]
     }
 }
