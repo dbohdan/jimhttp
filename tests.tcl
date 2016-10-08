@@ -133,6 +133,12 @@ test json \
     # Trailing garbage.
     assert [catch {::json::parse {"Hello" blah}}]
 
+    assert-all-equal [::json::subset {a b c} {a b c d e f}] 1
+    assert-all-equal [::json::subset {a b c d e f} {a b c}] 0
+    assert-all-equal [::json::subset {a b c d e f} {}] 0
+    assert-all-equal [::json::subset {} {a b c}] 1
+    assert-all-equal [::json::subset a a] 1
+
     # Schema tests.
 
     assert-all-equal [::json::stringify 0 1 number] 0
@@ -266,6 +272,29 @@ test json \
                     -schema {* string c number} \
                     -compact 1] \
             {{"a":"0","b":"1","c":2}}
+    assert-all-equal \
+            [::json::stringify2 {a 123 b {456 789}} \
+                    -numberDictArrays 0 \
+                    -schema {a string b {N* number}} \
+                    -strictSchema 1] \
+            {{"a": "123", "b": [456, 789]}}
+    assert-all-equal \
+            [::json::stringify2 {a b c d} \
+                    -numberDictArrays 0 \
+                    -schema {N* {}} \
+                    -strictSchema 1] \
+            {["a", "b", "c", "d"]}
+    assert [catch {::json::stringify2 {a 0 b 1} \
+            -numberDictArrays 0 \
+            -schema {a string} \
+            -strictSchema 1]}]
+    assert-all-equal \
+            [::json::stringify2 {a 0 b 1} \
+                    -numberDictArrays 0 \
+                    -schema {a string * string } \
+                    -strictSchema 1] \
+            {{"a": "0", "b": "1"}}
+    assert [catch {::json::stringify2 {a 0 b 1} -foo bar]}]
 }
 
 # arguments tests

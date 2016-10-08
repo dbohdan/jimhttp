@@ -28,19 +28,24 @@ proc ::json::parse {str {numberDictArrays 1}} {
 # Serialize nested Tcl dictionaries as JSON.
 #
 # numberDictArrays: encode dictionaries with keys {0 1 2 3 ...} as arrays, e.g.,
-# {0 a 1 b} to ["a", "b"]. If numberDictArrays is not true stringify will try to
-# produce objects from all Tcl lists and dictionaries unless explicitly told
+# {0 a 1 b} to ["a", "b"]. If $numberDictArrays is not true stringify will try
+# to produce objects from all Tcl lists and dictionaries unless explicitly told
 # otherwise in the schema.
 #
-# schema: data types for the values in $data. $schema consists of lists and/or
-# dictionaries nested just the same as the data in $data. Each value in $schema
-# specifies the data type of the value in $data to which it corresponds. The
+# schema: data types for the values in $data. $schema consists of nested lists
+# and/or dictionaries that mirror the structure of the data in $data. Each value
+# in $schema specifies the data type of the corresponding value in $data. The
 # type can be one of "array", "boolean", "null", "number", "object" or "string".
-# The special dictionary key "*" sets the default data type for every value in
-# am object. The key "N*" does the same for the elements of an array.
+# The special dictionary key "*" in any dictionary in $schema sets the default
+# data type for every value in the corresponding dictionary in $data. The key
+# "N*" does the same for the elements of an array. When $numberDictArrays is
+# true setting "*" forces a dictionary to be serialized as an object when it
+# would have been serialized as an array by default (e.g., {0 foo 1 bar}). When
+# $numberDictArrays is false setting "N*" forces a list to be serialized as an
+# array rather than an object. In that case the list must start with
+# {N* defaultType type1 type2 ...}.
 #
-# strictSchema: generate an error if there is no schema for a value in
-# $data.
+# strictSchema: generate an error if there is no schema for a value in $data.
 #
 # compact: no decorative whitespace.
 proc ::json::stringify {data {numberDictArrays 1} {schema ""}
@@ -58,11 +63,12 @@ proc ::json::stringify {data {numberDictArrays 1} {schema ""}
 
     set schemaForceArray [expr {
         ($schema eq "array") ||
+        ([lindex $schema 0] eq $::json::everyElement) ||
         ($numberDictArrays && $schemaValidDict &&
                 [dict exists $schema $::json::everyElement]) ||
         (!$numberDictArrays && $validDict && $schemaValidDict &&
                 ([llength $schema] > 0) &&
-                ([dict keys $schema] ne [dict keys $data]))
+                (![::json::subset [dict keys $schema] [dict keys $data]]))
     }]
     set schemaForceObject [expr {
         ($schema eq "object") ||
@@ -116,10 +122,13 @@ proc ::json::stringify {data {numberDictArrays 1} {schema ""}
 
 # A convenience wrapper for ::json::stringify with named parameters.
 proc ::json::stringify2 {data args} {
-    set numberDictArrays [::json::get-arg $args -numberDictArrays 1]
-    set schema [::json::get-arg $args -schema {}]
-    set strictSchema [::json::get-arg $args -strictSchema 0]
-    set compact [::json::get-arg $args -compact 0]
+    set numberDictArrays  [::json::get-option  -numberDictArrays 1  ]
+    set schema            [::json::get-option  -schema {}           ]
+    set strictSchema      [::json::get-option  -strictSchema 0      ]
+    set compact           [::json::get-option  -compact 0           ]
+    if {[llength [dict keys $args]] > 0} {
+        error "unknown options: [dict keys $args]"
+    }
 
     return [::json::stringify \
             $data $numberDictArrays $schema $strictSchema $compact]
@@ -129,14 +138,30 @@ proc ::json::stringify2 {data args} {
 
 ## Utility procedures.
 
-# If $argument is a key in $dictionary return its value. If not, return
-# $default.
-proc ::json::get-arg {dictionary argument default} {
-    if {[dict exists $dictionary $argument]} {
-        return [dict get $dictionary $argument]
+# If $option is a key in $args of the caller unset it and return its value.
+# If not, return $default.
+proc ::json::get-option {option default} {
+    upvar args dictionary
+    if {[dict exists $dictionary $option]} {
+        set result [dict get $dictionary $option]
+        dict unset dictionary $option
     } else {
-        return $default
+        set result $default
     }
+    return $result
+}
+
+# Return 1 if the elements in $a are a subset of those in $b and and 0
+# otherwise.
+proc ::json::subset {a b} {
+    set keySet {}
+    foreach x $a {
+        dict set keySet $x 1
+    }
+    foreach x $b {
+        dict unset keySet $x
+    }
+    return [expr {[llength $keySet] == 0}]
 }
 
 ## Procedures used by ::json::stringify.
@@ -175,7 +200,6 @@ proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
 proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
         {strictSchema 0} {compact 0}} {
     set arrayElements {}
-
     if {$numberDictArrays} {
         foreach {key value} $array {
             if {($schema eq "") || ($schema eq "array")} {
@@ -188,9 +212,14 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
                     $valueSchema $strictSchema]
         }
     } else { ;# list arrays
+        set defaultSchema ""
+        if {[lindex $schema 0] eq $::json::everyElement} {
+            set defaultSchema [lindex $schema 1]
+            set schema [lrange $schema 2 end]
+        }
         foreach value $array valueSchema $schema {
             if {($schema eq "") || ($schema eq "array")} {
-                set valueSchema {}
+                set valueSchema $defaultSchema
             }
             lappend arrayElements [::json::stringify $value 0 \
                     $valueSchema $strictSchema $compact]
