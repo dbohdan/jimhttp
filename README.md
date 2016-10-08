@@ -85,7 +85,7 @@ puts [::json::stringify {
     e true
 } 0 {
     a string
-    c array:number
+    c {N* number}
     d string
 }]
 ```
