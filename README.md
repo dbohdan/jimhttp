@@ -2,8 +2,8 @@
 
 A standalone library collection and web microframework prototype for [Jim
 Tcl](http://jim.tcl-lang.org/). The libraries implement command line and proc
-argument parsing, an HTML DSL, parsing and generating JSON, templates and
-persistent storage powered by SQLite3. The web framework provides a rough
+argument parsing, an HTML DSL, parsing and generating JSON, templates, and
+persistent storage powered by SQLite3. The web microframework provides a rough
 implementation of the HTTP/1.1 protocol and a routing DSL.
 
 # Components
@@ -32,8 +32,8 @@ indicates an unstable API.
 
 2\. Schemas define data types. See the example below.
 
-3\. **Warning:** parsing is fairly slow. The
-[jq module](https://tcl.wiki/11630) provides faster JSON parsing in Jim Tcl
+3\. **Warning:** parsing is fairly slow. ([Benchmark](https://tcl.wiki/48500).)
+The [jq module](https://tcl.wiki/11630) provides faster JSON parsing in Jim Tcl
 through an external binary.
 
 4\. Only the compatible components are tested in Tcl 8.5/8.6.
