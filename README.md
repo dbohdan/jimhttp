@@ -1,8 +1,10 @@
 [![Build Status](https://travis-ci.org/dbohdan/jimhttp.svg)](https://travis-ci.org/dbohdan/jimhttp)
 
-A web microframework prototype for [Jim Tcl](http://jim.tcl-lang.org/). Provides
-a rough implementation of the HTTP protocol as well as routing, templates, JSON
-generation and parsing, an HTML DSL and persistent storage powered by SQLite3.
+A standalone library collection and web microframework prototype for [Jim
+Tcl](http://jim.tcl-lang.org/). The libraries implement command line and proc
+argument parsing, an HTML DSL, parsing and generating JSON, templates and
+persistent storage powered by SQLite3. The web framework provides a rough
+implementation of the HTTP/1.1 protocol and a routing DSL.
 
 # Components
 
@@ -22,7 +24,7 @@ indicates an unstable API.
 | [json.tcl](json.tcl) | JSON generation with schema support.&#x200A;<sup>2</sup> JSON parsing.&#x200A;<sup>3</sup> | 2.1.0 |
 | [mime.tcl](mime.tcl) | Rudimentary MIME type detection based on the file extension. | 1.2.0 |
 | [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | SQLite persistence of static variables. | 0.2.0 |
-| [template.tcl](template.tcl) | [tmpl_parser](http://tcl.wiki/20363) templating. | 1.0.0 |
+| [template.tcl](template.tcl) | [tmpl_parser](https://tcl.wiki/20363) templating. | 1.0.0 |
 | [testing.tcl](testing.tcl) | A test framework with support for tcltest-style constraints. | 0.2.0 |
 | [tests.tcl](tests.tcl) | Tests for other components.&#x200A;<sup>4</sup> | — |
 
@@ -30,8 +32,8 @@ indicates an unstable API.
 
 2\. Schemas define data types. See the example below.
 
-3\. **Warning:** parsing is currently slow. The
-[jq module](http://tcl.wiki/11630) provides faster JSON parsing in Jim Tcl
+3\. **Warning:** parsing is fairly slow. The
+[jq module](https://tcl.wiki/11630) provides faster JSON parsing in Jim Tcl
 through an external binary.
 
 4\. Only the compatible components are tested in Tcl 8.5/8.6.
@@ -95,8 +97,9 @@ puts [::json::stringify {
 Compile Jim Tcl 0.76 or later from the Git repository. Previous stable
 releases (0.75 or earlier) will not work. You will need an SQLite3 development
 package (`libsqlite3-dev` on Debian/Ubuntu, `libsqlite3x-devel` on
-Fedora) to do this and optionally AsciiDoc (`asciidoc` on Debian/Ubuntu
-and Fedora) to generate the documentation (don't use `--disable-docs` then).
+Fedora, `sqlite3-devel` on openSUSE Tumbleweed) to do this and optionally
+AsciiDoc (`asciidoc` on Debian/Ubuntu, Fedora and openSUSE) to generate the
+documentation (don't use the option `--disable-docs` in that case).
 
 ```sh
 git clone https://github.com/msteveb/jimtcl.git
@@ -115,7 +118,7 @@ cd jimhttp
 jimsh example.tcl
 ```
 
-then pointing your web browser at <http://localhost:8080/>.
+and then pointing your web browser at <http://localhost:8080/>.
 
 ## Vagrant
 
