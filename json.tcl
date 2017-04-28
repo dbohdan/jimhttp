@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 2.0.0
+    variable version 2.1.0
 
     variable everyKey *
     variable everyElement N*
@@ -387,7 +387,7 @@ proc ::json::tokenize json {
         set char [string index $json $i]
         switch -exact -- $char {
             \" {
-                set value [::json::analyze-string [string range $json $i end]]
+                set value [::json::analyze-string $json $i]
                 lappend tokens \
                         [list STRING [subst -nocommand -novariables $value]]
 
@@ -418,14 +418,12 @@ proc ::json::tokenize json {
             \r {}
             default {
                 if {$char in {- 0 1 2 3 4 5 6 7 8 9}} {
-                    set value [::json::analyze-number \
-                            [string range $json $i end]]
+                    set value [::json::analyze-number $json $i]
                     lappend tokens [list NUMBER $value]
 
                     incr i [expr {[string length $value] - 1}]
                 } elseif {$char in {t f n}} {
-                    set value [::json::analyze-boolean-or-null \
-                            [string range $json $i end]]
+                    set value [::json::analyze-boolean-or-null $json $i]
                     lappend tokens [list RAW $value]
 
                     incr i [expr {[string length $value] - 1}]
@@ -439,8 +437,8 @@ proc ::json::tokenize json {
 }
 
 # Return the beginning of $str parsed as "true", "false" or "null".
-proc ::json::analyze-boolean-or-null str {
-    regexp {^(true|false|null)} $str value
+proc ::json::analyze-boolean-or-null {str start} {
+    regexp -start $start {(true|false|null)} $str value
     if {![info exists value]} {
         error "can't parse value as JSON true/false/null: [list $str]"
     }
@@ -448,8 +446,8 @@ proc ::json::analyze-boolean-or-null str {
 }
 
 # Return the beginning of $str parsed as a JSON string.
-proc ::json::analyze-string str {
-    if {[regexp {^"((?:[^"\\]|\\.)*)"} $str _ result]} {
+proc ::json::analyze-string {str start} {
+    if {[regexp -start $start {"((?:[^"\\]|\\.)*)"} $str _ result]} {
         return $result
     } else {
         error "can't parse JSON string: [list $str]"
@@ -457,11 +455,12 @@ proc ::json::analyze-string str {
 }
 
 # Return $str parsed as a JSON number.
-proc ::json::analyze-number str {
-    if {[regexp -- {^-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(:?(?:e|E)[+-]?[0-9]*)?} \
+proc ::json::analyze-number {str start} {
+    if {[regexp -start $start -- \
+            {-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(:?(?:e|E)[+-]?[0-9]*)?} \
             $str result]} {
-        #            [][ integer part  ][ optional  ][  optional exponent  ]
-        #            ^ sign             [ frac. part]
+        #    [][ integer part  ][ optional  ][  optional exponent  ]
+        #    ^ sign             [ frac. part]
         return $result
     } else {
         error "can't parse JSON number: [list $str]"
