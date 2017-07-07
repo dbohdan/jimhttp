@@ -1,10 +1,11 @@
 [![Build Status](https://travis-ci.org/dbohdan/jimhttp.svg)](https://travis-ci.org/dbohdan/jimhttp)
 
-A standalone library collection and web microframework prototype for [Jim
-Tcl](http://jim.tcl-lang.org/). The libraries implement command line and proc
-argument parsing, an HTML DSL, parsing and generating JSON, templates, and
-persistent storage powered by SQLite3. The web microframework provides a rough
-implementation of the HTTP/1.1 protocol and a routing DSL.
+A collection of standalone libraries and a web microframework prototype for
+[Jim Tcl](http://jim.tcl-lang.org/). Most of the libraries also work in Tcl 8.x.
+The libraries implement command line and proc argument parsing, an HTML DSL,
+parsing and generating JSON, templates, and persistent storage powered by
+SQLite3. The web microframework provides a rough implementation of the HTTP/1.1
+protocol and a routing DSL.
 
 # Components
 
