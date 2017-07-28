@@ -1,4 +1,4 @@
-#/bin/sh
+#! /bin/sh
 
 # Run jimhttp in a loop. curl localhost:8080/quit to restart.
 cd /jimhttp
