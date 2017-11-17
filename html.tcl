@@ -6,7 +6,7 @@ namespace eval ::html {
     variable version 0.2.1
 }
 
-# HTML entities processing code based on http://tcl.wiki/26403.
+# HTML entities processing code based on http://wiki.tcl-lang.org/26403.
 source entities.tcl
 
 set ::html::entitiesInverse [lreverse $::html::entities]
