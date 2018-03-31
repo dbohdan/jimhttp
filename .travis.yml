@@ -4,9 +4,11 @@ addons:
   apt:
     packages:
       - libsqlite3-dev
+      - tcl
 install:
   - ./vagrant/install-jimtcl.sh
 before_script:
   - export PATH="$PATH:$PWD/jimtcl"
 script:
   - ./tests.tcl
+  - tclsh tests.tcl
