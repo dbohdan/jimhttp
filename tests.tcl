@@ -295,6 +295,26 @@ test json \
                     -strictSchema 1] \
             {{"a": "0", "b": "1"}}
     assert [catch {::json::stringify2 {a 0 b 1} -foo bar]}]
+
+    # Tokenization errors.
+
+    catch {::json::tokenize {blah blah blah}} errorResult
+    assert-equal $errorResult {can't tokenize value as JSON: {blah blah blah}}
+
+    catch [list ::json::tokenize [string repeat {blah } 299]blah] errorResult
+    set s "can't tokenize value as JSON: \"[string repeat {blah } 30]... "
+    append s [string repeat {blah } 29]blah\"
+    assert-equal $errorResult $s
+    unset s
+
+    catch {::json::analyze-boolean-or-null nope 0} errorResult
+    assert-equal $errorResult {can't parse value as JSON true/false/null: nope}
+
+    catch {::json::analyze-string {\"trailin'} 0} errorResult
+    assert-equal $errorResult {can't parse JSON string: {\"trailin'}}
+
+    catch {::json::analyze-number NaN 0} errorResult
+    assert-equal $errorResult {can't parse JSON number: NaN}
 }
 
 # arguments.tcl tests

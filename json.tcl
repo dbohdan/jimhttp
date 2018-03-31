@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 2.1.0
+    variable version 2.1.1
 
     variable everyKey *
     variable everyElement N*
@@ -428,7 +428,7 @@ proc ::json::tokenize json {
 
                     incr i [expr {[string length $value] - 1}]
                 } else {
-                    error "can't tokenize value as JSON: [list $json]"
+                    parse-error {can't tokenize value as JSON: %s} $json
                 }
             }
         }
@@ -440,7 +440,8 @@ proc ::json::tokenize json {
 proc ::json::analyze-boolean-or-null {str start} {
     regexp -start $start {(true|false|null)} $str value
     if {![info exists value]} {
-        error "can't parse value as JSON true/false/null: [list $str]"
+        parse-error {can't parse value as JSON true/false/null: %s} \
+                    $str
     }
     return $value
 }
@@ -450,7 +451,7 @@ proc ::json::analyze-string {str start} {
     if {[regexp -start $start {"((?:[^"\\]|\\.)*)"} $str _ result]} {
         return $result
     } else {
-        error "can't parse JSON string: [list $str]"
+        parse-error {can't parse JSON string: %s} $str
     }
 }
 
@@ -463,6 +464,18 @@ proc ::json::analyze-number {str start} {
         #    ^ sign             [ frac. part]
         return $result
     } else {
-        error "can't parse JSON number: [list $str]"
+        parse-error {can't parse JSON number: %s} $str
     }
+}
+
+# Return the error $formatString formatted with $str as its argument. $str is
+# quoted and, if long, truncated.
+proc ::json::parse-error {formatString json} {
+    if {[string length $json] > 300} {
+        set truncated "\"[string trimright [string range $json 0 149]] ... "
+        append truncated [string trimleft [string range $json end-149 end]]\"
+    } else {
+        set truncated [list $json]
+    }
+    error [format $formatString $truncated]
 }
