@@ -1,6 +1,6 @@
 #!/usr/bin/env jimsh
 # Tests for the web framework and its modules.
-# Copyright (C) 2014, 2015, 2016 dbohdan.
+# Copyright (C) 2014, 2015, 2016, 2018 dbohdan.
 # License: MIT
 
 source testing.tcl

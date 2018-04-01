@@ -1,5 +1,5 @@
 # JSON parser / encoder.
-# Copyright (C) 2014, 2015, 2016, 2017 dbohdan.
+# Copyright (C) 2014, 2015, 2016, 2017, 2018 dbohdan.
 # License: MIT
 
 ### The public API: will remain backwards compatible for a major release
