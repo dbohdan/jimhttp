@@ -296,6 +296,43 @@ test json \
             {{"a": "0", "b": "1"}}
     assert [catch {::json::stringify2 {a 0 b 1} -foo bar]}]
 
+    # String escaping.
+
+    assert-equal [::json::stringify {"Hello, world!"}] \
+                 {"\"Hello, world!\""}
+    assert-equal [::json::stringify2 "a\nb" \
+                                     -schema string] \
+                 {"a\nb"}
+
+    assert-equal [::json::stringify2 "a/b/c/ c:\\b\\a\\" \
+                                     -schema string] \
+                 {"a\/b\/c\/ c:\\b\\a\\"}
+
+    assert-equal [::json::stringify2 "\b\f\n\r\t" \
+                                     -schema string] \
+                 {"\b\f\n\r\t"}
+
+    set s {}
+    for {set i 0} {$i < 32} {incr i} {
+        append s [format %c $i]
+    }
+    assert-equal [::json::stringify2 $s -schema string] \
+                 \"[join [list \\u0000 \\u0001 \\u0002 \\u0003 \
+                               \\u0004 \\u0005 \\u0006 \\u0007 \
+                               \\b     \\t     \\n     \\u000b \
+                               \\f     \\r     \\u000e \\u000f \
+                               \\u0010 \\u0011 \\u0012 \\u0013 \
+                               \\u0014 \\u0015 \\u0016 \\u0017 \
+                               \\u0018 \\u0019 \\u001a \\u001b \
+                               \\u001c \\u001d \\u001e \\u001f] {}]\"
+    assert-equal [::json::parse [::json::stringify2 $s -schema string]] \
+                 $s
+    unset s
+
+    assert-equal [::json::stringify2 {{"key space"} value}] \
+                 {{"\"key space\"": "value"}}
+
+
     # Tokenization errors.
 
     catch {::json::tokenize {blah blah blah}} errorResult

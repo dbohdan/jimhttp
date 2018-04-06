@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 2.1.1
+    variable version 2.1.2
 
     variable everyKey *
     variable everyElement N*
@@ -51,7 +51,7 @@ proc ::json::parse {str {numberDictArrays 1}} {
 proc ::json::stringify {data {numberDictArrays 1} {schema ""}
         {strictSchema 0} {compact 0}} {
     if {$schema eq "string"} {
-        return "\"$data\""
+        return \"[::json::escape-string $data]\"
     }
 
     set validDict [expr {
@@ -93,7 +93,7 @@ proc ::json::stringify {data {numberDictArrays 1} {schema ""}
         } {
             return $data
         } elseif {$schema eq ""} {
-            return "\"$data\""
+            return \"[escape-string $data]\"
         } else {
             error "invalid schema \"$schema\" for value \"$data\""
         }
@@ -252,11 +252,52 @@ proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
             set valueSchema [::json::get-schema-by-key \
                 $schema $key $strictSchema]
         }
-        lappend objectDict "\"$key\"$keyValueSeparator[::json::stringify \
+        lappend objectDict "\"[escape-string \
+                $key]\"$keyValueSeparator[::json::stringify \
                 $value $numberDictArrays $valueSchema $strictSchema $compact]"
     }
 
     return "{[join $objectDict $elementSeparator]}"
+}
+
+proc ::json::escape-string s {
+    return [string map {
+        \u0000 \\u0000
+        \u0001 \\u0001
+        \u0002 \\u0002
+        \u0003 \\u0003
+        \u0004 \\u0004
+        \u0005 \\u0005
+        \u0006 \\u0006
+        \u0007 \\u0007
+        \u0008 \\b
+        \u0009 \\t
+        \u000a \\n
+        \u000b \\u000b
+        \u000c \\f
+        \u000d \\r
+        \u000e \\u000e
+        \u000f \\u000f
+        \u0010 \\u0010
+        \u0011 \\u0011
+        \u0012 \\u0012
+        \u0013 \\u0013
+        \u0014 \\u0014
+        \u0015 \\u0015
+        \u0016 \\u0016
+        \u0017 \\u0017
+        \u0018 \\u0018
+        \u0019 \\u0019
+        \u001a \\u001a
+        \u001b \\u001b
+        \u001c \\u001c
+        \u001d \\u001d
+        \u001e \\u001e
+        \u001f \\u001f
+        \" \\\"
+        \\ \\\\
+        /  \\/
+    } $s]
 }
 
 ## Procedures used by ::json::parse.
