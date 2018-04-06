@@ -306,7 +306,7 @@ test json \
 
     assert-equal [::json::stringify2 "a/b/c/ c:\\b\\a\\" \
                                      -schema string] \
-                 {"a\/b\/c\/ c:\\b\\a\\"}
+                 {"a/b/c/ c:\\b\\a\\"}
 
     assert-equal [::json::stringify2 "\b\f\n\r\t" \
                                      -schema string] \
@@ -332,6 +332,9 @@ test json \
     assert-equal [::json::stringify2 {{"key space"} value}] \
                  {{"\"key space\"": "value"}}
 
+    assert-equal [::json::stringify2 {<script>"use strict";</script>} \
+                                     -schema string] \
+                 {"<script>\"use strict\";<\/script>"}
 
     # Tokenization errors.
 

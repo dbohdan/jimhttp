@@ -6,7 +6,7 @@
 ### version of this module.
 
 namespace eval ::json {
-    variable version 2.1.2
+    variable version 2.1.3
 
     variable everyKey *
     variable everyElement N*
@@ -296,7 +296,7 @@ proc ::json::escape-string s {
         \u001f \\u001f
         \" \\\"
         \\ \\\\
-        /  \\/
+        </  <\\/
     } $s]
 }
 
