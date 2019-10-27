@@ -1,6 +1,6 @@
 #!/usr/bin/env jimsh
 # Tests for the web framework and its modules.
-# Copyright (C) 2014, 2015, 2016, 2018 dbohdan.
+# Copyright (c) 2014, 2015, 2016, 2018, 2019 dbohdan.
 # License: MIT
 
 source testing.tcl
@@ -328,6 +328,12 @@ test json \
     assert-equal [::json::parse [::json::stringify2 $s -schema string]] \
                  $s
     unset s
+    # Only perform the following test if [regexp] supports Unicode character
+    # indices or this isn't a UTF-8 build.
+    if {[regexp -inline -start 1 . こ] eq {}} {
+        assert-equal [::json::parse {{"тест": "こんにちは世界"}}] \
+        {тест こんにちは世界}
+    }
 
     assert-equal [::json::stringify2 {{"key space"} value}] \
                  {{"\"key space\"": "value"}}
