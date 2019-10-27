@@ -1,6 +1,11 @@
 # JSON parser / encoder.
-# Copyright (C) 2014, 2015, 2016, 2017, 2018 dbohdan.
-# License: MIT
+# Copyright (c) 2014, 2015, 2016, 2017, 2018, 2019 dbohdan.
+# License: MIT.
+#
+# This library is compatible at least with Tcl 8.5-8.6 and Jim Tcl v0.76
+# or later. However, to work with unescaped UTF-8 JSON strings in a UTF-8
+# build of Jim Tcl you will need a more recent version: Git commit 9eba9e87fc
+# or later. The latest release as of 2019-10-27, v0.78, will not suffice.
 
 ### The public API: will remain backwards compatible for a major release
 ### version of this module.
