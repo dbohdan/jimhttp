@@ -36,8 +36,10 @@ indicates an unstable API.
 3\. **Warning:** parsing is fairly slow in general and extremely slow in UTF-8
 builds of Jim Tcl. ([Obsolete benchmark](https://wiki.tcl-lang.org/48500).)
 This may matter to you if you need to decode more than a few dozen KiB of JSON
-at a time. The [jq module](https://wiki.tcl-lang.org/11630) provides faster
-JSON parsing in Jim Tcl through an external binary.
+at a time. Since version 0.79 Jim Tcl can be built with a fast binary
+extension for parsing and encoding JSON. The
+[jq module](https://wiki.tcl-lang.org/11630) is an option for faster JSON
+parsing in earlier versions. It requires an external binary.
 
 4\. Only the compatible components are tested in Tcl 8.5/8.6.
 
