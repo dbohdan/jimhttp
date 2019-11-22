@@ -439,22 +439,36 @@ test example \
             test-url $url/delay
 
             # Binary file corruption test.
-            set tempFile1 /tmp/jimhttp.test
-            set tempFile2 /tmp/jimhttp.test.echo
-            exec dd if=/dev/urandom of=$tempFile1 bs=1024 count=1024
-            test-url -o "$tempFile2" -X POST -F "testfile=@$tempFile1" \
-                    $url/file-echo
-            set fileContents1 [::http::read-file $tempFile1]
-            set fileContents2 [::http::read-file $tempFile2]
+            set fileOrig /tmp/jimhttp.test
+            set fileEcho /tmp/jimhttp.test.echo
+
+            set s {}
+            for {set i 0} {$i < 4096} {incr i} {
+                append s [binary format c [rand 256]]
+            }
+            set ch [open $fileOrig wb]
+            for {set i 0} {$i < 1024 * 1024 / [string bytelength $s]} {incr i} {
+                puts -nonewline $ch $s
+            }
+            close $ch
+
+            test-url -o $fileEcho \
+                     -X POST \
+                     -F testfile=@$fileOrig \
+                     $url/file-echo
+
+            set contentsOrig [::http::read-file $fileOrig]
+            set contentsEcho [::http::read-file $fileEcho]
 
             assert [list \
-                    [string bytelength $fileContents1] == \
-                    [string bytelength $fileContents2]] \
+                    [string bytelength $contentsOrig] == \
+                    [string bytelength $contentsEcho]] \
                     "file corruption test file size"
-            assert [expr {$fileContents1 eq $fileContents2}] \
+            assert [expr {$contentsOrig eq $contentsEcho}] \
                     "file corruption test file contents"
-            file delete $tempFile1
-            file delete $tempFile2
+
+            file delete $fileOrig
+            file delete $fileEcho
             # End file corruption test
         }
 
