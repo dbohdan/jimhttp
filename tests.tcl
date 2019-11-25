@@ -36,6 +36,63 @@ test http \
             [dict create {*}{
                 message {Hello, world!}
             }]
+
+
+    assert-equal [::http::string-bytefirst c abcdef] 2
+    assert-equal [::http::string-bytefirst f abcdef] 5
+    assert-equal [::http::string-bytefirst е тест] 2
+    assert-equal [::http::string-bytefirst world helloworld] 5
+    assert-equal [::http::string-bytefirst тест мегатест] 8
+
+
+    set seq ----sepfoo----сепbar----sepbaz\u0001----sep
+    assert-equal [::http::string-pop seq ----sep] {}
+    assert-equal [::http::string-pop seq ----сеп] foo
+    assert-equal [::http::string-pop seq --sep]   bar--
+    assert-equal [::http::string-pop seq ----sep] baz\u0001
+    assert-equal [::http::string-pop seq ----sep] {}
+    assert-equal $seq {}
+
+
+    set postString "
+Content-Disposition: form-data; name=\"image file\" filename=\"bar.png\"
+Content-Type: application/octet-stream
+
+\u00ff\u00ff\u00ff\u0001\u0002\u0003\u0004\u0005
+------------------------38d79e1985ee3bbf"
+    assert-equal [::http::string-pop postString \
+                                     ------------------------38d79e1985ee3bbf] \
+                "
+Content-Disposition: form-data; name=\"image file\" filename=\"bar.png\"
+Content-Type: application/octet-stream
+
+\u00ff\u00ff\u00ff\u0001\u0002\u0003\u0004\u0005
+"
+    assert-equal $postString {}
+
+    set contentType {multipart/form-data; boundary=------------------------38d79e1985ee3bbf}
+    set formData "--------------------------38d79e1985ee3bbf
+Content-Disposition: form-data; name=\"text\"
+
+This is text.
+--------------------------38d79e1985ee3bbf
+Content-Disposition: form-data; name=\"text file\" filename=\"foo.txt\"
+
+Hello.
+--------------------------38d79e1985ee3bbf
+Content-Disposition: form-data; name=\"image file\" filename=\"bar.png\"
+Content-Type: application/octet-stream
+
+\u00ff\u0001\u0002\u0003\u0004\u0005
+--------------------------38d79e1985ee3bbf"
+    set result [list \
+        formPost \
+        [list text "This is text." \
+              {image file} \u00ff\u0001\u0002\u0003\u0004\u0005 \
+              {text file} Hello.] \
+    ]
+    assert-equal [::http::parse-multipart-data $formData $contentType \n] \
+                 $result
 }
 
 # html.tcl tests
@@ -443,13 +500,11 @@ test example \
             set fileEcho /tmp/jimhttp.test.echo
 
             set s {}
-            for {set i 0} {$i < 4096} {incr i} {
+            for {set i 0} {$i < 256} {incr i} {
                 append s [binary format c [rand 256]]
             }
             set ch [open $fileOrig wb]
-            for {set i 0} {$i < 1024 * 1024 / [string bytelength $s]} {incr i} {
-                puts -nonewline $ch $s
-            }
+            puts -nonewline $ch $s
             close $ch
 
             test-url -o $fileEcho \

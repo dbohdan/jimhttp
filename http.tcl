@@ -1,10 +1,10 @@
 # An HTTP server and web framework for Jim Tcl.
-# Copyright (C) 2014, 2015, 2016 dbohdan.
+# Copyright (C) 2014, 2015, 2016, 2019 dbohdan.
 # License: MIT
 namespace eval ::http {
     source mime.tcl
 
-    variable version 0.15.1
+    variable version 0.15.2
 
     variable verbosity 0
     variable crashOnError 0
@@ -177,20 +177,42 @@ proc ::http::form-decode {formData} {
     return $result
 }
 
-# Return the content up to but not including $separator in variable
-# $stringVarName. Remove this content and the separator following it from the
-# $stringVarName. If $separator isn't in $stringVarName's value return the whole
-# string.
+# A slow Unicode-agnostic [string first].
+proc ::http::string-bytefirst {needle haystack} {
+    set bytesNeedle [string bytelength $needle]
+    set bytesHaystack [string bytelength $haystack]
+
+    set n $($bytesHaystack - $bytesNeedle)
+    for {set i 0} {$i <= $n} {incr i} {
+        set range [string byterange $haystack $i $($i + $bytesNeedle - 1)]
+        if {$range eq $needle} {
+            return $i
+        }
+    }
+
+    return -1
+}
+
+# Return the bytes up to but not including $separator in variable
+# $stringVarName. Remove them and the separator following them from
+# $stringVarName. If $separator isn't in $stringVarName's value, return
+# the whole string. Ignores Unicode.
 proc ::http::string-pop {stringVarName separator} {
     upvar 1 $stringVarName str
-    set substrLength [string first $separator $str]
-    if {$substrLength > -1} {
-        set substr [string range $str 1 $substrLength-1]
-        set str [string range $str $substrLength+[string length $separator] end]
+
+    set bytes [string-bytefirst $separator $str]
+
+    if {$bytes > -1} {
+        set substr [string byterange $str 0 $bytes-1]
+        set str [string byterange $str \
+                                  $bytes+[string bytelength $separator] \
+                                  end]
     } else {
         set substr $str
         set str {}
     }
+
+
     return $substr
 }
 
@@ -273,32 +295,38 @@ proc ::http::parse-value {str} {
 # Very hacky.
 proc ::http::parse-multipart-data {postString contentType newline} {
     set result {}
-    if {[catch {set boundary [dict get \
-            [::http::parse-value $contentType] boundary]}]} {
+
+    try {
+        set boundary \
+            [dict get [::http::parse-value $contentType] boundary]
+    } on error _ {
         error {no boundary specified in Content-Type}
     }
-    set boundaryLength [string length $boundary]
-    while {[set part [string-pop postString $boundary]] ne {}} {
-        set partHeader [::http::parse-headers \
-                [split [string-pop part "$newline$newline"] $newline]]
-        # Trim "(\r)\n--" in content.
-        set part [string range $part 0 end-[string length "$newline--"]]
-        if {$part ne {}} {
-            set m [::http::parse-value $partHeader(contentDisposition)]
-            if {[dict exists $m form-data] &&
-                        [dict exists $m name]} {
-                # Store files and form fields separately.
-                if {[dict exists $m filename]} {
-                    dict set result files \
-                            $m(name) filename $m(filename)
-                    dict set result files \
-                            $m(name) content $part
-                } else {
-                    dict set result formPost $m(name) $part
-                }
+
+    while {$postString ne {}} {
+        set part [string-pop postString $newline--$boundary]
+
+        set lines [split [string-pop part $newline$newline] \
+                         $newline]
+        set partHeader [::http::parse-headers $lines]
+
+        if {$part in {{} --}} continue
+
+        set m [::http::parse-value $partHeader(contentDisposition)]
+
+        if {[dict exists $m form-data] && [dict exists $m name]} {
+            # Store files and form fields separately.
+            if {[dict exists $m filename]} {
+                dict set result \
+                         files $m(name) filename $m(filename)
+                dict set result \
+                         files $m(name) content $part
+            } else {
+                dict set result formPost $m(name) $part
             }
         }
     }
+
     return $result
 }
 
@@ -363,19 +391,31 @@ proc ::http::serve {channel clientAddr clientPort} {
     set request [::http::parse-headers $headerLines]
     set error 0
 
-    if {(![dict exists $request method]) || (![dict exists $request url])} {
+    if {![dict exists $request method] || ![dict exists $request url]} {
         ::http::log error "Bad request."
         set error 400
     }
 
-    # Process POST data.
-    if {($error == 0) && ($request(method) eq "POST")} {
-        set request [dict merge {contentType application/x-www-form-urlencoded
-                contentLength 0} $request]
+    # Process POST data.  Refactor me into a proc with early returns.
+    if {$error != 0 || $request(method) ne "POST"} {
+        dict set request formPost {}
+    } else {
+        set request [dict merge {
+            contentType application/x-www-form-urlencoded
+            contentLength 0
+        } $request]
 
-        if {[string is integer $request(contentLength)] &&
-                ($request(contentLength) > 0)} {
-            if {$request(contentLength) <= $::http::maxRequestLength} {
+        if {![string is integer $request(contentLength)]
+            || $request(contentLength) <= 0} {
+            ::http::log error "Bad request: Content-Length is invalid\
+                    (\"$request(contentLength)\")."
+            set error 400
+        } else {
+            if {$request(contentLength) > $::http::maxRequestLength} {
+                ::http::log error \
+                        "Request too large: $request(contentLength)."
+                set error 413
+            } else {
                 if {[dict exists $request expect] &&
                             ($request(expect) eq "100-continue")} {
                     puts $channel "HTTP/1.1 100 Continue\n"
@@ -411,18 +451,8 @@ proc ::http::serve {channel clientAddr clientPort} {
                             "POST request: ($request(contentType) skipped)"
                     dict set request formPost $postString
                 }
-            } else {
-                ::http::log error \
-                        "Request too large: $request(contentLength)."
-                set error 413
             }
-        } else {
-            ::http::log error "Bad request: Content-Length is invalid\
-                    (\"$request(contentLength)\")."
-            set error 400
         }
-    } else {
-        dict set request formPost {}
     }
 
     if {[dict exists $request cookies]} {
