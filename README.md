@@ -21,7 +21,7 @@ indicates an unstable API.
 | [example.tcl](example.tcl)&#x200A;<sup>1</sup> | A sample web server that demonstrates the use of the other components. | — |
 | [entities.tcl](entities.tcl) | A dictionary mapping characters to HTML entities. | 1.0.0 |
 | [html.tcl](html.tcl) | A DSL for HTML generation. Requires entities.tcl. | 0.2.1 |
-| [http.tcl](http.tcl)&#x200A;<sup>1</sup> | The titular web microframework. Requires mime.tcl. | 0.15.1 |
+| [http.tcl](http.tcl)&#x200A;<sup>1</sup> | The titular web microframework. Requires mime.tcl. | 0.15.2 |
 | [json.tcl](json.tcl) | JSON generation with schema support.&#x200A;<sup>2</sup> JSON parsing.&#x200A;<sup>3</sup> | 2.1.3 |
 | [mime.tcl](mime.tcl) | Rudimentary MIME type detection based on the file extension. | 1.2.0 |
 | [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | SQLite persistence of static variables. | 0.2.0 |
