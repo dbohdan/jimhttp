@@ -94,3 +94,10 @@ proc rejim::serialize list {
 
     return $resp
 }
+
+
+proc rejim::command {handle commandList} {
+    puts -nonewline $handle [serialize $commandList]
+    set result [parse $handle]
+    return $result
+}

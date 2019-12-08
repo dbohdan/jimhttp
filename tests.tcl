@@ -645,6 +645,11 @@ test rejim-2-live \
         -body {
     set h [socket stream $::redisServer]
 
+    assert-equal [rejim::command $h {set rejim test}] \
+                 {simple OK}
+    assert-equal [lindex [rejim::command $h incr] 0] \
+                 error
+
     $h close
 }
 
