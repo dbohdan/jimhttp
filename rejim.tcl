@@ -71,7 +71,7 @@ proc rejim::read-until {handle needle} {
 
     set data {}
 
-    while true {
+    while 1 {
         if {[$handle eof]} break
         set last [$handle read 1]
         append data $last

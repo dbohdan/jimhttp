@@ -586,7 +586,6 @@ test rejim-1-protocol \
 
 
     set temp [file tempfile]
-    defer {file delete $temp}
 
     set h [open $temp w+]
     local proc reset-test-file contents h {
@@ -643,6 +642,10 @@ test rejim-1-protocol \
     assert-equal [rejim::strip-tags {
         array {integer 867} null {integer 5309} {simple /} {bulk Jenny}
     } -] {867 - 5309 / Jenny}
+
+
+    close $h
+    file delete $temp
 }
 
 test rejim-2-live \
@@ -661,7 +664,6 @@ test rejim-2-live \
                  {array {bulk subscribe} {bulk rejim} {integer 1}}
 
     set ::queue {}
-    defer {unset ::queue}
     local proc ::redis-readable {} h {
         lappend ::queue [rejim::parse $h]
     }
@@ -677,7 +679,7 @@ test rejim-2-live \
     assert-equal $::queue \
                  "{array {bulk message} {bulk rejim}\
                    {bulk {This is a message!}}}"
-
+    unset ::queue
 
     $h close
 }
