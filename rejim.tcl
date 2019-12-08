@@ -7,43 +7,38 @@ namespace eval rejim {
 }
 
 
-proc rejim::parse {message {start 0}} {
-    set typeChar [string byterange $message $start $start]
-    set newlineIndex [first-char $message \r $start]
-    if {$newlineIndex == -1} {
-        error [list can't find \\r in [string byterange $message $start end]]
-    }
-    set firstData [string byterange $message $start+1 $newlineIndex-1]
-    set nextIndex $($newlineIndex + 2)
+proc rejim::parse handle {
+    set typeByte [$handle read 1]
+    set firstData [string byterange [read-until $handle \r] 0 end-1]
+    $handle read 1  ;# Discard \n.
 
-    set end {}
     set type {}
     set contents {}
 
-    switch -- $typeChar {
+    switch -- $typeByte {
         + -
         - {
-            set type $($typeChar eq {+} ? {simple} : {error})
-            return [list $nextIndex $type $firstData]
+            set type $($typeByte eq {+} ? {simple} : {error})
+            return [list $type $firstData]
         }
 
         : {
-            return [list $nextIndex integer $firstData]
+            return [list integer $firstData]
         }
 
         $ {
             set len $firstData
             if {$len == -1} {
-                return [list $nextIndex null]
+                return null
             }
             if {$len < -1} {
                 error [list invalid bulk string length: $len]
             }
 
-            set data [string byterange $message \
-                                       $nextIndex \
-                                       $($nextIndex + $len - 1)]
-            return [list $($nextIndex + $len + 2) bulk $data]
+            set data [$handle read $len]
+            $handle read 2  ;# Discard \r\n.
+
+            return [list bulk $data]
         }
 
         * {
@@ -54,34 +49,40 @@ proc rejim::parse {message {start 0}} {
 
             set list {}
             for {set i 0} {$i < $n} {incr i} {
-                set el [lassign [parse $message $nextIndex] nextIndex]
-                lappend list $el
+                lappend list [parse $handle]
             }
 
-            return [concat $nextIndex array $list]
+            return [concat array $list]
         }
 
         default {
-            error [list unknown message type: $typeChar]
+            error [list unknown message type: $typeByte]
         }
     }
 }
 
 
-proc rejim::first-char {str c {start 0}} {
-    # We can't use [string first] or [regexp] here.  In a UTF-8 build
-    # [string first] counts Unicode characters.  [regexp] will stop at the
-    # first \0.  We could make a wrapper around [regexp] for performance, but
-    # it should not matter.  We only use this proc to find short string
-    # fragments.
-    set bytes [string bytelength $str]
-    for {set i $start} {$i < $bytes} {incr i} {
-        if {[string byterange $str $i $i] eq $c} {
-            return $i
-        }
+proc rejim::read-until {handle needle} {
+    # We only use this proc to find short strings.  The performance of reading
+    # one byte at a time shouldn't matter.
+    if {[string bytelength $needle] != 1} {
+        error [list $needle isn't one byte]
     }
 
-    return -1
+    set data {}
+
+    while true {
+        if {[$handle eof]} break
+        set last [$handle read 1]
+        append data $last
+        if {$last eq $needle} break
+    }
+
+    if {$last ne $needle} {
+        error [list stream ended before $needle]
+    }
+
+    return $data
 }
 
 

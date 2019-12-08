@@ -580,32 +580,64 @@ test rejim-1-protocol \
         -body {
     source rejim.tcl
 
+
     assert-equal [rejim::serialize {LLEN foobar}] \
                  *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n
 
-    assert-equal [rejim::parse "+Hello, world!\r\n"] \
-                 {16 simple {Hello, world!}}
-    assert-equal [rejim::parse -Wrong!\r\n] \
-                 {9 error Wrong!}
-    assert-equal [rejim::parse :108\r\n] \
-                 {6 integer 108}
-    assert-equal [rejim::parse :-42\r\n] \
-                 {6 integer -42}
-    assert-equal [rejim::parse \$10\r\n0123456789\r\n] \
-                 {17 bulk 0123456789}
-    assert-equal [rejim::parse \$-1\r\n] \
-                 {5 null}
 
-    catch {rejim::parse \$+\r\n} error
+    set temp [file tempfile]
+    defer {file delete $temp}
+
+    set h [open $temp w+]
+    local proc reset-test-file contents h {
+        $h seek 0 start
+        $h puts -nonewline $contents
+        $h seek 0 start
+    }
+
+
+    reset-test-file "+Hello, world!\r\n"
+    assert-equal [rejim::parse $h] \
+                 {simple {Hello, world!}}
+
+    reset-test-file -Wrong!\r\n
+    assert-equal [rejim::parse $h] \
+                 {error Wrong!}
+
+    reset-test-file :108\r\n
+    assert-equal [rejim::parse $h] \
+                 {integer 108}
+
+    reset-test-file :-42\r\n
+    assert-equal [rejim::parse $h] \
+                 {integer -42}
+
+    reset-test-file \$10\r\n0123456789\r\n
+    assert-equal [rejim::parse $h] \
+                 {bulk 0123456789}
+
+    reset-test-file \$-1\r\n
+    assert-equal [rejim::parse $h] \
+                 null
+
+
+    reset-test-file \$+\r\n
+    catch {rejim::parse $h} error
     assert-equal $error {invalid bulk string length: +}
-    catch {rejim::parse *-1\r\n} error
+
+    reset-test-file *-1\r\n
+    catch {rejim::parse $h} error
     assert-equal $error {invalid number of array elements: -1}
 
-    assert-equal [rejim::parse *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n] \
-                 {26 array {bulk LLEN} {bulk foobar}}
-    assert-equal [rejim::parse \
-        *5\r\n:867\r\n\$-1\r\n:5309\r\n+/\r\n\$5\r\nJenny\r\n \
-    ] {37 array {integer 867} null {integer 5309} {simple /} {bulk Jenny}}
+
+    reset-test-file *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n
+    assert-equal [rejim::parse $h] \
+                 {array {bulk LLEN} {bulk foobar}}
+
+    reset-test-file *5\r\n:867\r\n\$-1\r\n:5309\r\n+/\r\n\$5\r\nJenny\r\n
+    assert-equal [rejim::parse $h] \
+                 "array {integer 867} null {integer 5309}\
+                  {simple /} {bulk Jenny}"
 }
 
 test rejim-2-live \
