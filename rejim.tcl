@@ -101,3 +101,31 @@ proc rejim::command {handle commandList} {
     set result [parse $handle]
     return $result
 }
+
+
+proc rejim::strip-tags {response {null %NULL%}} {
+    set tag [lindex $response 0]
+
+    switch -- $tag {
+        bulk -
+        error -
+        integer -
+        simple {
+            return [lindex $response 1]
+        }
+
+        null {
+            return $null
+        }
+
+        array {
+            return [lmap x [lrange $response 1 end] {
+                strip-tags $x $null
+            }]
+        }
+
+        default {
+            error [list unknown tag: $tag]
+        }
+    }
+}

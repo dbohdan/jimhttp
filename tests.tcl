@@ -575,6 +575,7 @@ test storage \
     assert-equal $::ns::bar 7890
 }
 
+
 source rejim.tcl
 
 test rejim-1-protocol \
@@ -637,6 +638,11 @@ test rejim-1-protocol \
     assert-equal [rejim::parse $h] \
                  "array {integer 867} null {integer 5309}\
                   {simple /} {bulk Jenny}"
+
+
+    assert-equal [rejim::strip-tags {
+        array {integer 867} null {integer 5309} {simple /} {bulk Jenny}
+    } -] {867 - 5309 / Jenny}
 }
 
 test rejim-2-live \
