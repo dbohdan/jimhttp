@@ -24,7 +24,7 @@ indicates an unstable API.
 | [http.tcl](http.tcl)&#x200A;<sup>1</sup> | The titular web microframework. Requires mime.tcl. | 0.15.2 |
 | [json.tcl](json.tcl) | JSON generation with schema support.&#x200A;<sup>2</sup> JSON parsing.&#x200A;<sup>3</sup> | 2.1.3 |
 | [mime.tcl](mime.tcl) | Rudimentary MIME type detection based on the file extension. | 1.2.0 |
-| [rejim.tcl](rejim.tcl) | A basic Redis client.&#x200A;<sup>1</sup> | 0.1.0 |
+| [rejim.tcl](rejim.tcl)&#x200A;<sup>1</sup> | A basic Redis client. | 0.1.0 |
 | [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | SQLite persistence of static variables. | 0.2.0 |
 | [template.tcl](template.tcl) | [tmpl_parser](https://wiki.tcl-lang.org/20363) templating. | 1.0.0 |
 | [testing.tcl](testing.tcl) | A test framework with support for tcltest-style constraints. | 0.3.0 |
