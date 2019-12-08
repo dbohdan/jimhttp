@@ -659,6 +659,17 @@ test rejim-2-live \
                  error
 
 
+    # Binary value.
+    set bin {}
+    for {set i 0} {$i < 256} {incr i} {
+        append bin [binary format c [rand 256]]
+    }
+    assert-equal [rejim::command $h [list set rejim $bin]] \
+                 {simple OK}
+    assert-equal [rejim::command $h [list get rejim]] \
+                 [list bulk $bin]
+
+
     # Pub/Sub.
     assert-equal [rejim::command $h {subscribe rejim}] \
                  {array {bulk subscribe} {bulk rejim} {integer 1}}
