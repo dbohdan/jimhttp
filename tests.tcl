@@ -575,12 +575,11 @@ test storage \
     assert-equal $::ns::bar 7890
 }
 
+source rejim.tcl
+
 test rejim-1-protocol \
         -constraints jim \
         -body {
-    source rejim.tcl
-
-
     assert-equal [rejim::serialize {LLEN foobar}] \
                  *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n
 
@@ -649,6 +648,30 @@ test rejim-2-live \
                  {simple OK}
     assert-equal [lindex [rejim::command $h incr] 0] \
                  error
+
+
+    # Pub/Sub.
+    assert-equal [rejim::command $h {subscribe rejim}] \
+                 {array {bulk subscribe} {bulk rejim} {integer 1}}
+
+    set ::queue {}
+    defer {unset ::queue}
+    local proc ::redis-readable {} h {
+        lappend ::queue [rejim::parse $h]
+    }
+    $h readable ::redis-readable
+
+    after 10 {
+        set h2 [socket stream $::redisServer]
+        rejim::command $h2 {publish rejim {This is a message!}}
+        $h2 close
+    }
+    vwait ::queue
+
+    assert-equal $::queue \
+                 "{array {bulk message} {bulk rejim}\
+                   {bulk {This is a message!}}}"
+
 
     $h close
 }
