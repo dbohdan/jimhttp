@@ -1,10 +1,10 @@
 #!/usr/bin/env jimsh
 # A test framework similar to tcltest.
-# Copyright (C) 2014, 2015, 2016 dbohdan.
+# Copyright (C) 2014, 2015, 2016, 2019 dbohdan.
 # License: MIT
 
 namespace eval ::testing {
-    variable version 0.2.0
+    variable version 0.3.0
 
     namespace export *
     variable tests {}
@@ -82,7 +82,7 @@ proc ::testing::run-tests argv {
 
     lassign $argv testsToRun
     set tests {}
-    foreach testProc [info procs ::testing::tests::*] {
+    foreach testProc [lsort [info procs ::testing::tests::*]] {
         lappend tests [namespace tail $testProc]
     }
     if {$testsToRun in {"" "all"}} {
