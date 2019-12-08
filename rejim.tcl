@@ -3,7 +3,7 @@
 # License: MIT
 
 namespace eval rejim {
-    variable version 0.0.0
+    variable version 0.1.0
 }
 
 
