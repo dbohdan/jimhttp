@@ -12,9 +12,6 @@ proc rejim::parse handle {
     set firstData [string byterange [read-until $handle \r] 0 end-1]
     $handle read 1  ;# Discard \n.
 
-    set type {}
-    set contents {}
-
     switch -- $typeByte {
         + -
         - {
