@@ -6,6 +6,11 @@
 source testing.tcl
 namespace import ::testing::*
 
+set redisServer 127.0.0.1:6379
+if { ![catch {close [socket stream $redisServer]}] } {
+    lappend ::testing::constraints redis
+}
+
 # http.tcl tests
 test http \
         -constraints jim \
@@ -568,6 +573,47 @@ test storage \
     set ::ns::bar 0
     ::storage::restore-var ::ns::bar
     assert-equal $::ns::bar 7890
+}
+
+test rejim-1-protocol \
+        -constraints jim \
+        -body {
+    source rejim.tcl
+
+    assert-equal [rejim::serialize {LLEN foobar}] \
+                 *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n
+
+    assert-equal [rejim::parse "+Hello, world!\r\n"] \
+                 {16 simple {Hello, world!}}
+    assert-equal [rejim::parse -Wrong!\r\n] \
+                 {9 error Wrong!}
+    assert-equal [rejim::parse :108\r\n] \
+                 {6 integer 108}
+    assert-equal [rejim::parse :-42\r\n] \
+                 {6 integer -42}
+    assert-equal [rejim::parse \$10\r\n0123456789\r\n] \
+                 {17 bulk 0123456789}
+    assert-equal [rejim::parse \$-1\r\n] \
+                 {5 null}
+
+    catch {rejim::parse \$+\r\n} error
+    assert-equal $error {invalid bulk string length: +}
+    catch {rejim::parse *-1\r\n} error
+    assert-equal $error {invalid number of array elements: -1}
+
+    assert-equal [rejim::parse *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n] \
+                 {26 array {bulk LLEN} {bulk foobar}}
+    assert-equal [rejim::parse \
+        *5\r\n:867\r\n\$-1\r\n:5309\r\n+/\r\n\$5\r\nJenny\r\n \
+    ] {37 array {integer 867} null {integer 5309} {simple /} {bulk Jenny}}
+}
+
+test rejim-2-live \
+        -constraints {jim redis} \
+        -body {
+    set h [socket stream $::redisServer]
+
+    $h close
 }
 
 run-tests $argv
