@@ -60,18 +60,19 @@ proc ::testing::test args {
     dict set tests $name constraints [dict-default-get "" $options -constraints]
 }
 
-# Return 1 if all constraints listed for test $test are satisfied in
-# $::testing::constraints.
-proc ::testing::constraints-satisfied? test {
+proc ::testing::unsat-constraints test {
     variable tests
     variable constraints
 
+    set unsat {}
+
     foreach constraint [dict get $tests $test constraints] {
         if {$constraint ni $constraints} {
-            return 0
+            lappend unsat $constraint
         }
     }
-    return 1
+
+    return $unsat
 }
 
 
@@ -91,19 +92,25 @@ proc ::testing::run-tests argv {
 
     puts {running tests:}
     set skipped {}
-
     foreach test $tests {
-        if {$test in $testsToRun
-            && [::testing::constraints-satisfied? $test]} {
+        if {$test ni $testsToRun} {
+            lappend skipped $test {user choice}
+            continue
+        }
+        
+        set unsat [::testing::unsat-constraints $test]
+        if {$unsat eq {}} {
             puts "- $test"
             ::testing::tests::$test
         } else {
-            lappend skipped $test
+            lappend skipped $test [concat unsatisfied: $unsat]
         }
     }
 
     if {$skipped ne {}} {
         puts \nskipped:
-        puts "- [join $skipped "\n- "]"
+    }
+    foreach {test reason} $skipped {
+        puts "- $test ($reason)"
     }
 }
