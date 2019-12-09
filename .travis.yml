@@ -4,6 +4,8 @@ addons:
     packages:
       - libsqlite3-dev
       - tcl
+services:
+  - redis-server
 install:
   - ./vagrant/install-jimtcl.sh
 before_script:
