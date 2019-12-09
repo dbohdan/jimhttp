@@ -644,6 +644,11 @@ test rejim-1-protocol \
     } -] {867 - 5309 / Jenny}
 
 
+    assert-equal [rejim::serialize-tagged {
+        array {integer 867} null {integer 5309} {simple /} {bulk Jenny}
+    }] *5\r\n:867\r\n\$-1\r\n:5309\r\n+/\r\n\$5\r\nJenny\r\n
+
+
     close $h
     file delete $temp
 }

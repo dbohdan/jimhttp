@@ -126,3 +126,40 @@ proc rejim::strip-tags {response {null %NULL%}} {
         }
     }
 }
+
+
+proc rejim::serialize-tagged tagged {
+    set data [lassign $tagged tag]
+
+    switch -- $tag {
+        array {
+            return *[llength $data]\r\n[join [lmap x $data {
+                serialize-tagged $x
+            }] {}]
+        }
+
+        bulk {
+            return \$[string bytelength $data]\r\n$data\r\n
+        }
+
+        error -
+        integer -
+        simple {
+            set c [dict get {
+                error -
+                integer :
+                simple +
+            } $tag]
+
+            return $c$data\r\n
+        }
+
+        null {
+            return \$-1\r\n
+        }
+
+        default {
+            error [list unknown tag: $tag]
+        }
+    }
+}
