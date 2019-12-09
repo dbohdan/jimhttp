@@ -81,7 +81,7 @@ proc ::testing::run-tests argv {
     variable constraints
     lappend constraints [::testing::interpreter]
 
-    lassign $argv testsToRun
+    set testsToRun $argv
     set tests {}
     foreach testProc [lsort [info procs ::testing::tests::*]] {
         lappend tests [namespace tail $testProc]
