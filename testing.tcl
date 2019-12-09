@@ -88,10 +88,22 @@ proc ::testing::run-tests argv {
     if {$testsToRun in {"" "all"}} {
         set testsToRun $tests
     }
-    foreach test $testsToRun {
-        if {[::testing::constraints-satisfied? $test]} {
-            puts "running test \"$test\""
+
+    puts {running tests:}
+    set skipped {}
+
+    foreach test $tests {
+        if {$test in $testsToRun
+            && [::testing::constraints-satisfied? $test]} {
+            puts "- $test"
             ::testing::tests::$test
+        } else {
+            lappend skipped $test
         }
+    }
+
+    if {$skipped ne {}} {
+        puts \nskipped:
+        puts "- [join $skipped "\n- "]"
     }
 }
