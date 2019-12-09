@@ -6,13 +6,18 @@
 source testing.tcl
 namespace import ::testing::*
 
+# Set the test constraints.
 set redisServer 127.0.0.1:6379
 if { ![catch {close [socket stream $redisServer]}] } {
     lappend ::testing::constraints redis
 }
-if { ![catch {exec redis-cli --version}] } {
-    lappend ::testing::constraints redis-cli
-}
+apply {{} {
+    if { ![catch {exec redis-cli --version} version]
+        && [regexp {(\d+)\.\d+\.\d+} $version _ major]
+        && $major >= 4 } {
+        lappend ::testing::constraints redis-cli
+    }
+}}
 
 # http.tcl tests
 test http \
