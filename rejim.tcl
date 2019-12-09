@@ -7,6 +7,13 @@ namespace eval rejim {
 }
 
 
+proc rejim::command {handle commandList} {
+    puts -nonewline $handle [serialize $commandList]
+    set result [parse $handle]
+    return $result
+}
+
+
 proc rejim::parse handle {
     set typeByte [$handle read 1]
     set firstData [string byterange [read-until $handle \r] 0 end-1]
@@ -93,41 +100,6 @@ proc rejim::serialize list {
 }
 
 
-proc rejim::command {handle commandList} {
-    puts -nonewline $handle [serialize $commandList]
-    set result [parse $handle]
-    return $result
-}
-
-
-proc rejim::strip-tags {response {null %NULL%}} {
-    set tag [lindex $response 0]
-
-    switch -- $tag {
-        bulk -
-        error -
-        integer -
-        simple {
-            return [lindex $response 1]
-        }
-
-        null {
-            return $null
-        }
-
-        array {
-            return [lmap x [lrange $response 1 end] {
-                strip-tags $x $null
-            }]
-        }
-
-        default {
-            error [list unknown tag: $tag]
-        }
-    }
-}
-
-
 proc rejim::serialize-tagged tagged {
     set data [lassign $tagged tag]
 
@@ -156,6 +128,34 @@ proc rejim::serialize-tagged tagged {
 
         null {
             return \$-1\r\n
+        }
+
+        default {
+            error [list unknown tag: $tag]
+        }
+    }
+}
+
+
+proc rejim::strip-tags {response {null %NULL%}} {
+    set tag [lindex $response 0]
+
+    switch -- $tag {
+        bulk -
+        error -
+        integer -
+        simple {
+            return [lindex $response 1]
+        }
+
+        null {
+            return $null
+        }
+
+        array {
+            return [lmap x [lrange $response 1 end] {
+                strip-tags $x $null
+            }]
         }
 
         default {
