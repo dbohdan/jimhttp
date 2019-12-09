@@ -10,6 +10,9 @@ set redisServer 127.0.0.1:6379
 if { ![catch {close [socket stream $redisServer]}] } {
     lappend ::testing::constraints redis
 }
+if { ![catch {exec redis-cli --version}] } {
+    lappend ::testing::constraints redis-cli
+}
 
 # http.tcl tests
 test http \
@@ -699,5 +702,45 @@ test rejim-2-live \
 
     $h close
 }
+
+
+test rejim-3-server \
+        -constraints {jim redis-cli} \
+        -body {
+    set port 16379
+    set h [socket stream.server 127.0.0.1:$port]
+
+    local proc ::server-readable {} h {
+        set client [$h accept]
+
+        assert-equal [rejim::parse $client] \
+                     {array {bulk hello} {bulk world}}
+        $client puts -nonewline [rejim::serialize-tagged {
+            array {bulk answer} {integer 42}
+        }]
+
+        $client close
+        set ::server-done 1
+    }
+    $h readable ::server-readable
+
+    set temp [file tempfile]
+    exec redis-cli -p $port hello world > $temp &
+    vwait ::server-done
+
+    set contents {}
+    for {set i 1} {$contents eq {} && $i <= 5} {incr i} {
+        set f [open $temp]
+        set contents [$f read]
+        $f close
+
+        after $(100 * $i)
+    }
+    assert-equal [string match *answer*42* $contents] 1
+
+    file delete $temp
+    $h close
+}
+
 
 run-tests $argv
