@@ -711,6 +711,7 @@ test rejim-3-server \
     set h [socket stream.server 127.0.0.1:$port]
 
     local proc ::server-readable {} h {
+        set ::server-done 1
         set client [$h accept]
 
         assert-equal [rejim::parse $client] \
@@ -720,7 +721,6 @@ test rejim-3-server \
         }]
 
         $client close
-        set ::server-done 1
     }
     $h readable ::server-readable
 
