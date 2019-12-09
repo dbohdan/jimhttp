@@ -102,6 +102,7 @@ proc rejim::serialize list {
 
 proc rejim::serialize-tagged tagged {
     set data [lassign $tagged tag]
+    unset tagged
 
     switch -- $tag {
         array {
