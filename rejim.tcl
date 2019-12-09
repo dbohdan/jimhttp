@@ -75,7 +75,7 @@ proc rejim::read-until {handle needle} {
         if {$last eq $needle} break
     }
 
-    if {$last ne $needle} {
+    if {[exists last] && $last ne $needle} {
         error [list stream ended before $needle]
     }
 
