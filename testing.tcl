@@ -14,7 +14,7 @@ namespace eval ::testing::tests {}
 
 # Generate an error with $expression is not true.
 proc ::testing::assert {expression {message ""}} {
-    if {![expr $expression]} {
+    if {![uplevel 1 [list expr $expression]]} {
         set errorMessage "Not true: $expression"
         if {$message ne ""} {
             append errorMessage " ($message)"
