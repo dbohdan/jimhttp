@@ -2,7 +2,6 @@ language: c
 addons:
   apt:
     packages:
-      - libsqlite3-dev
       - tcl
 services:
   - redis-server
