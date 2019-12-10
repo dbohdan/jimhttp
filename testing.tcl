@@ -1,10 +1,10 @@
 #!/usr/bin/env jimsh
-# A test framework similar to tcltest.
+# A test framework with constraints.
 # Copyright (C) 2014, 2015, 2016, 2019 dbohdan.
 # License: MIT
 
 namespace eval ::testing {
-    variable version 0.4.0
+    variable version 0.5.0
 
     namespace export *
     variable tests {}
