@@ -27,7 +27,7 @@ indicates an unstable API.
 | [rejim.tcl](rejim.tcl)&#x200A;<sup>1</sup> | A basic Redis client. | 0.1.0 |
 | [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | SQLite persistence of static variables. | 0.2.0 |
 | [template.tcl](template.tcl) | [tmpl_parser](https://wiki.tcl-lang.org/20363) templating. | 1.0.0 |
-| [testing.tcl](testing.tcl) | A test framework with support for tcltest-style constraints. | 0.3.0 |
+| [testing.tcl](testing.tcl) | A test framework with support for tcltest-style constraints. | 0.4.0 |
 | [tests.tcl](tests.tcl) | Tests for the other components.&#x200A;<sup>4</sup> | — |
 
 1\. Jim Tcl-only.
