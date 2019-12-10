@@ -90,8 +90,10 @@ proc ::testing::run-tests argv {
         set testsToRun $tests
     }
 
-    puts {running tests:}
+    set failed {}
     set skipped {}
+
+    puts {running tests:}
     foreach test $tests {
         if {$test ni $testsToRun} {
             lappend skipped $test {user choice}
@@ -101,9 +103,19 @@ proc ::testing::run-tests argv {
         set unsat [::testing::unsat-constraints $test]
         if {$unsat eq {}} {
             puts "- $test"
-            ::testing::tests::$test
+            if {[catch {
+                ::testing::tests::$test
+            } msg opts]} {
+                set stacktrace [expr {
+                    [::testing::interpreter] eq {jim}
+                    ? [errorInfo $msg [dict get $opts -errorinfo]]
+                    : [dict get $opts -errorinfo]
+                }]
+                puts "failed: $stacktrace"
+                lappend failed $test $opts
+            }
         } else {
-            lappend skipped $test [concat unsatisfied: $unsat]
+            lappend skipped $test [concat constraints: $unsat]
         }
     }
 
@@ -112,5 +124,9 @@ proc ::testing::run-tests argv {
     }
     foreach {test reason} $skipped {
         puts "- $test ($reason)"
+    }
+
+    if {$failed ne {}} {
+        exit 1
     }
 }
