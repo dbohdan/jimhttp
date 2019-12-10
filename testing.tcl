@@ -126,6 +126,15 @@ proc ::testing::run-tests argv {
         puts "- $test ($reason)"
     }
 
+    set n(total)    [llength $tests]
+    set n(skipped)  [expr {[llength $skipped] / 2}]
+    set n(failed)   [expr {[llength $failed] / 2}]
+    set n(passed)   [expr {$n(total) - $n(skipped) - $n(failed)}]
+    puts \n[list total    $n(total) \
+                 passed   $n(passed) \
+                 skipped  $n(skipped) \
+                 failed   $n(failed)]
+
     if {$failed ne {}} {
         exit 1
     }
