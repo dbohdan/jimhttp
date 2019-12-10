@@ -199,9 +199,9 @@ test json \
             {["a", "b", "c"]}
 
     # Invalid JSON.
-    assert [catch {::json::parse x}]
+    assert {[catch {::json::parse x}]}
     # Trailing garbage.
-    assert [catch {::json::parse {"Hello" blah}}]
+    assert {[catch {::json::parse {"Hello" blah}}]}
 
     assert-equal [::json::subset {a b c} {a b c d e f}] 1
     assert-equal [::json::subset {a b c d e f} {a b c}] 0
@@ -219,11 +219,11 @@ test json \
     assert-equal [::json::stringify true 1 boolean] true
     assert-equal [::json::stringify null 1 null] null
 
-    assert [catch {::json::stringify 0 1 object}]
-    assert [catch {::json::stringify 0 1 noise}]
-    assert [catch {::json::stringify 0 1 array}]
-    assert [catch {::json::stringify x 1 boolean}]
-    assert [catch {::json::stringify x 1 null}]
+    assert {[catch {::json::stringify 0 1 object}]}
+    assert {[catch {::json::stringify 0 1 noise}]}
+    assert {[catch {::json::stringify 0 1 array}]}
+    assert {[catch {::json::stringify x 1 boolean}]}
+    assert {[catch {::json::stringify x 1 null}]}
 
     assert-equal \
             [::json::stringify \
@@ -240,12 +240,12 @@ test json \
             [::json::stringify {key1 {0 a 1 b}} 1 {key1 ""}] \
             [::json::stringify {key1 {0 a 1 b}} 1 {key1 {0 string 1 string}}] \
             {{"key1": ["a", "b"]}}
-    assert [catch {
+    assert {[catch {
         ::json::stringify {key1 {0 a 1 b}} 1 {key1 {0 string 2 string}} 1
-    }]
-    assert [catch {
+    }]}
+    assert {[catch {
         ::json::stringify {key1 {0 a 1 b}} 1 {key1 {0 boolean}}
-    }]
+    }]}
 
     assert-equal [::json::stringify {} 1 ""] {""}
     assert-equal [::json::stringify {} 1 string] {""}
@@ -354,17 +354,17 @@ test json \
                     -schema {N* {}} \
                     -strictSchema 1] \
             {["a", "b", "c", "d"]}
-    assert [catch {::json::stringify2 {a 0 b 1} \
+    assert {[catch {::json::stringify2 {a 0 b 1} \
             -numberDictArrays 0 \
             -schema {a string} \
-            -strictSchema 1]}]
+            -strictSchema 1]}]}
     assert-equal \
             [::json::stringify2 {a 0 b 1} \
                     -numberDictArrays 0 \
                     -schema {a string * string } \
                     -strictSchema 1] \
             {{"a": "0", "b": "1"}}
-    assert [catch {::json::stringify2 {a 0 b 1} -foo bar]}]
+    assert {[catch {::json::stringify2 {a 0 b 1} -foo bar]}]}
 
     # String escaping.
 
@@ -528,12 +528,11 @@ test example \
             set contentsOrig [::http::read-file $fileOrig]
             set contentsEcho [::http::read-file $fileEcho]
 
-            assert [list \
-                    [string bytelength $contentsOrig] == \
-                    [string bytelength $contentsEcho]] \
-                    "file corruption test file size"
-            assert [expr {$contentsOrig eq $contentsEcho}] \
-                    "file corruption test file contents"
+            assert {[string bytelength $contentsOrig]
+                    == [string bytelength $contentsEcho]} \
+                    "file corruption test: file size"
+            assert {$contentsOrig eq $contentsEcho} \
+                   "file corruption test: file contents"
 
             file delete $fileOrig
             file delete $fileEcho
@@ -741,7 +740,7 @@ test rejim-3-server \
 
         after $(100 * $i)
     }
-    assert-equal [string match *answer*42* $contents] 1
+    assert {[string match *answer*42* $contents]}
 
     file delete $temp
     $h close
