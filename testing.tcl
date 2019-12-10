@@ -32,7 +32,7 @@ proc ::testing::assert-equal args {
 }
 
 # Tell if we are running Tcl 8.x or Jim Tcl.
-proc ::testing::interpreter {} {
+proc ::testing::engine {} {
     if {[catch {info tclversion}]} {
         return jim
     } else {
@@ -79,7 +79,7 @@ proc ::testing::unsat-constraints test {
 # Run all or selected tests.
 proc ::testing::run-tests argv {
     variable constraints
-    lappend constraints [::testing::interpreter]
+    lappend constraints [::testing::engine]
 
     set testsToRun $argv
     set tests {}
@@ -107,7 +107,7 @@ proc ::testing::run-tests argv {
                 ::testing::tests::$test
             } msg opts]} {
                 set stacktrace [expr {
-                    [::testing::interpreter] eq {jim}
+                    [::testing::engine] eq {jim}
                     ? [errorInfo $msg [dict get $opts -errorinfo]]
                     : [dict get $opts -errorinfo]
                 }]
