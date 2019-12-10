@@ -489,7 +489,7 @@ test example \
 <li><a href="/template">/template</a></li>
 <li><a href="/quit">/quit</a></li></ul></html>}
 
-        set handle [open {| jimsh example.tcl -v 99}]
+        set handle [open [list | [info nameofexecutable] example.tcl -v 99]]
         set pid [pid $handle]
         # Wait until the server is ready to respond.
         $handle readable { set ::ready 1 }
