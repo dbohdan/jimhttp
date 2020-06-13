@@ -98,14 +98,16 @@ Content-Type: application/octet-stream
 
 \u00ff\u0001\u0002\u0003\u0004\u0005
 --------------------------38d79e1985ee3bbf"
-    set result [list \
-        formPost \
-        [list text "This is text." \
-              {image file} \u00ff\u0001\u0002\u0003\u0004\u0005 \
-              {text file} Hello.] \
-    ]
-    assert-equal [::http::parse-multipart-data $formData $contentType \n] \
-                 $result
+    set parsed [::http::parse-multipart-data $formData $contentType \n]
+
+    assert-equal [dict get $parsed formPost text] {This is text.}
+    assert-equal [dict get $parsed formPost {text file}] Hello.
+    assert-equal [dict get $parsed formPost {image file}] \
+                 \u00ff\u0001\u0002\u0003\u0004\u0005
+
+    assert-equal [dict keys $parsed] formPost
+    assert-equal [lsort [dict keys $parsed(formPost)]] \
+                 {{image file} text {text file}}
 }
 
 # html.tcl tests
