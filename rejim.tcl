@@ -1,13 +1,36 @@
 # A basic Redis client library.  Pronounced "regime" for some reason.
-# Copyright (c) 2019 D. Bohdan
+# Copyright (c) 2019, 2020 D. Bohdan
 # License: MIT
 
 namespace eval rejim {
-    variable version 0.1.0
+    variable version 0.2.0
+
+    variable jim [expr { ![catch {
+        proc x y {} {}
+        rename x {}
+    }] }]
+
+    if {$jim} {
+        proc byte-range {string first last} {
+            string byterange $string $first $last
+        }
+        proc byte-length string {
+            string bytelength $string
+        }
+    } else {
+        proc byte-range {string first last} {
+            string range $string $first $last
+        }
+        proc byte-length string {
+            string length $string
+        }
+    }
 }
 
 
 proc rejim::command {handle commandList} {
+    fconfigure $handle -translation binary -buffering none
+
     puts -nonewline $handle [serialize $commandList]
     set result [parse $handle]
     return $result
@@ -15,14 +38,16 @@ proc rejim::command {handle commandList} {
 
 
 proc rejim::parse handle {
-    set typeByte [$handle read 1]
-    set firstData [string byterange [read-until $handle \r] 0 end-1]
-    $handle read 1  ;# Discard \n.
+    fconfigure $handle -translation binary -buffering none
+
+    set typeByte [read $handle 1]
+    set firstData [byte-range [read-until $handle \r] 0 end-1]
+    read $handle 1  ;# Discard \n.
 
     switch -- $typeByte {
         + -
         - {
-            set type $($typeByte eq {+} ? {simple} : {error})
+            set type [expr { $typeByte eq {+} ? {simple} : {error} }]
             return [list $type $firstData]
         }
 
@@ -39,8 +64,8 @@ proc rejim::parse handle {
                 error [list invalid bulk string length: $len]
             }
 
-            set data [$handle read $len]
-            $handle read 2  ;# Discard \r\n.
+            set data [read $handle $len]
+            read $handle 2  ;# Discard \r\n.
 
             return [list bulk $data]
         }
@@ -67,22 +92,24 @@ proc rejim::parse handle {
 
 
 proc rejim::read-until {handle needle} {
+    fconfigure $handle -translation binary -buffering none
+
     # We only use this proc to find short strings.  The performance of reading
     # one byte at a time shouldn't matter.
-    if {[string bytelength $needle] != 1} {
+    if {[byte-length $needle] != 1} {
         error [list $needle isn't one byte]
     }
 
     set data {}
 
     while 1 {
-        if {[$handle eof]} break
-        set last [$handle read 1]
+        if {[eof $handle]} break
+        set last [read $handle 1]
         append data $last
         if {$last eq $needle} break
     }
 
-    if {[exists last] && $last ne $needle} {
+    if {[info exists last] && $last ne $needle} {
         error [list stream ended before $needle]
     }
 
@@ -93,7 +120,7 @@ proc rejim::read-until {handle needle} {
 proc rejim::serialize list {
     set resp *[llength $list]\r\n
     foreach el $list {
-        append resp $[string bytelength $el]\r\n$el\r\n
+        append resp $[byte-length $el]\r\n$el\r\n
     }
 
     return $resp
@@ -112,7 +139,7 @@ proc rejim::serialize-tagged tagged {
         }
 
         bulk {
-            return \$[string bytelength $data]\r\n$data\r\n
+            return \$[byte-length $data]\r\n$data\r\n
         }
 
         error -

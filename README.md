@@ -9,9 +9,9 @@ the HTTP/1.1 protocol and a routing DSL.
 
 # Components
 
-The components listed below work in Tcl 8.5, Tcl 8.6, and Jim Tcl 0.76 or later
-unless indicated otherwise.  Each component is versioned separately.  Component
-version numbers follow [semantic
+The components listed below work in Tcl 8.5, Tcl 8.6, Tcl 8.7a3, and Jim Tcl
+0.76 or later unless indicated otherwise.  Each component is versioned
+separately.  Component version numbers follow [semantic
 versioning](http://semver.org/spec/v2.0.0.html).  A major version number of zero
 indicates an unstable API.
 
@@ -22,19 +22,21 @@ indicates an unstable API.
 | [entities.tcl](entities.tcl) | A dictionary mapping characters to HTML entities. | 1.0.0 |
 | [html.tcl](html.tcl) | A DSL for HTML generation.  Requires entities.tcl. | 0.2.1 |
 | [http.tcl](http.tcl)&#x200A;<sup>1</sup> | The titular web microframework.  Requires mime.tcl. | 0.15.2 |
-| [json.tcl](json.tcl) | JSON generation with schema support.&#x200A;<sup>2</sup>  JSON parsing.&#x200A;<sup>3</sup> | 2.1.3 |
+| [json.tcl](json.tcl) | JSON generation with schema support.&#x200A;<sup>3</sup>  JSON parsing.&#x200A;<sup>4</sup> | 2.1.3 |
 | [mime.tcl](mime.tcl) | Rudimentary MIME type detection based on the file extension. | 1.2.0 |
-| [rejim.tcl](rejim.tcl)&#x200A;<sup>1</sup> | A basic Redis client. | 0.1.0 |
+| [rejim.tcl](rejim.tcl)&#x200A;<sup>2</sup> | A basic Redis client. | 0.2.0 |
 | [storage.tcl](storage.tcl)&#x200A;<sup>1</sup> | SQLite persistence of static variables. | 0.2.0 |
 | [template.tcl](template.tcl) | [tmpl_parser](https://wiki.tcl-lang.org/20363) templating. | 1.0.0 |
 | [testing.tcl](testing.tcl) | A test framework with support for tcltest-style constraints. | 0.5.0 |
-| [tests.tcl](tests.tcl) | Tests for the other components.&#x200A;<sup>4</sup> | — |
+| [tests.tcl](tests.tcl) | Tests for the other components.&#x200A;<sup>5</sup> | — |
 
 1\. Jim Tcl-only.
 
-2\. Schemas define data types.  See the example below.
+2\. Does not support Tcl 8.5.
 
-3\. **Warning:** parsing is fairly slow in general and extremely slow in UTF-8
+3\. Schemas define data types.  See the example below.
+
+4\. **Warning:** parsing is fairly slow in general and extremely slow in UTF-8
 builds of Jim Tcl.  ([Obsolete benchmark](https://wiki.tcl-lang.org/48500).)
 This may matter to you if you need to decode more than a few dozen KiB of JSON
 at a time.  Since version 0.79 Jim Tcl can be built with a fast binary
@@ -42,7 +44,7 @@ extension for parsing and encoding JSON.   The
 [jq module](https://wiki.tcl-lang.org/11630) is an option for faster JSON
 parsing in earlier versions.  It requires an external binary.
 
-4\. Only the compatible components are tested in Tcl 8.5/8.6.
+5\. Only compatible components are tested in Tcl 8.
 
 # Use examples
 

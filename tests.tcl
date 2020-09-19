@@ -1,23 +1,64 @@
 #!/usr/bin/env jimsh
 # Tests for the web framework and its modules.
-# Copyright (c) 2014, 2015, 2016, 2018, 2019 dbohdan.
+# Copyright (c) 2014, 2015, 2016, 2018, 2019, 2020 D. Bohdan.
 # License: MIT
 
 source testing.tcl
 namespace import ::testing::*
 
+proc client-socket {server port} {
+    # This code must run in Tcl 8.5.
+    if {[catch {
+        set ch [socket stream $server:$port]
+    }]} {
+        set ch [socket $server $port]
+    }
+
+    fconfigure $ch -translation binary
+    return $ch
+}
+
+# A wrapper that hides some of the differences between an event-driven socket
+# server in Jim Tcl and Tcl 8.  $script runs when a client connection becomes
+# readable with the client connection channel as its argument.
+proc server-socket {server port script} {
+    # This code does not need to run in Tcl 8.5; we can use [try].
+    try {
+        set ch [socket stream.server $server:$port]
+
+        set lambda [list apply {{script ch} {
+            set client [$ch accept]
+            {*}$script $client
+        }} $script $ch]
+
+        fileevent $ch readable $lambda
+    } on error _ {
+        set lambda [list apply {{script ch args} {
+            fconfigure $ch -blocking false
+            fileevent $ch readable [list {*}$script $ch]
+        }} $script]
+
+        set ch [socket -server $lambda -myaddr $server $port]
+    }
+
+    return $ch
+}
+
 # Set the test constraints.
-set redisServer 127.0.0.1:6379
-if { ![catch {close [socket stream $redisServer]}] } {
+set redisServer {127.0.0.1 6379}
+if { ![catch { close [client-socket {*}$redisServer] }] } {
     lappend ::testing::constraints redis
 }
 apply {{} {
-    if { ![catch {exec redis-cli --version} version]
+    if { ![catch { exec redis-cli --version } version]
         && [regexp {(\d+)\.\d+\.\d+} $version _ major]
         && $major >= 4 } {
         lappend ::testing::constraints redis-cli
     }
 }}
+if {[info commands lmap] eq {lmap}} {
+    lappend ::testing::constraints lmap
+}
 
 # http.tcl tests
 test http \
@@ -588,61 +629,65 @@ test storage \
 source rejim.tcl
 
 test rejim-1-protocol \
-        -constraints jim \
+        -constraints lmap \
         -body {
     assert-equal [rejim::serialize {LLEN foobar}] \
                  *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n
 
 
-    set temp [file tempfile]
+    if {[catch {
+        set temp [file tempfile]
+    }]} {
+        set temp [file join [file dirname [info script]] tests.tmp]
+    }
 
     set h [open $temp w+]
-    local proc reset-test-file contents h {
-        $h seek 0 start
-        $h puts -nonewline $contents
-        $h seek 0 start
+    proc reset-test-file {h contents} {
+        seek $h 0 start
+        puts -nonewline $h $contents
+        seek $h 0 start
     }
 
 
-    reset-test-file "+Hello, world!\r\n"
+    reset-test-file $h "+Hello, world!\r\n"
     assert-equal [rejim::parse $h] \
                  {simple {Hello, world!}}
 
-    reset-test-file -Wrong!\r\n
+    reset-test-file $h -Wrong!\r\n
     assert-equal [rejim::parse $h] \
                  {error Wrong!}
 
-    reset-test-file :108\r\n
+    reset-test-file $h :108\r\n
     assert-equal [rejim::parse $h] \
                  {integer 108}
 
-    reset-test-file :-42\r\n
+    reset-test-file $h :-42\r\n
     assert-equal [rejim::parse $h] \
                  {integer -42}
 
-    reset-test-file \$10\r\n0123456789\r\n
+    reset-test-file $h \$10\r\n0123456789\r\n
     assert-equal [rejim::parse $h] \
                  {bulk 0123456789}
 
-    reset-test-file \$-1\r\n
+    reset-test-file $h \$-1\r\n
     assert-equal [rejim::parse $h] \
                  null
 
 
-    reset-test-file \$+\r\n
+    reset-test-file $h \$+\r\n
     catch {rejim::parse $h} error
     assert-equal $error {invalid bulk string length: +}
 
-    reset-test-file *-1\r\n
+    reset-test-file $h *-1\r\n
     catch {rejim::parse $h} error
     assert-equal $error {invalid number of array elements: -1}
 
 
-    reset-test-file *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n
+    reset-test-file $h *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n
     assert-equal [rejim::parse $h] \
                  {array {bulk LLEN} {bulk foobar}}
 
-    reset-test-file *5\r\n:867\r\n\$-1\r\n:5309\r\n+/\r\n\$5\r\nJenny\r\n
+    reset-test-file $h *5\r\n:867\r\n\$-1\r\n:5309\r\n+/\r\n\$5\r\nJenny\r\n
     assert-equal [rejim::parse $h] \
                  "array {integer 867} null {integer 5309}\
                   {simple /} {bulk Jenny}"
@@ -660,12 +705,13 @@ test rejim-1-protocol \
 
     close $h
     file delete $temp
+    rename reset-test-file {}
 }
 
 test rejim-2-live \
-        -constraints {jim redis} \
+        -constraints {lmap redis} \
         -body {
-    set h [socket stream $::redisServer]
+    set h [client-socket {*}$::redisServer]
 
     assert-equal [rejim::command $h {set rejim test}] \
                  {simple OK}
@@ -676,7 +722,7 @@ test rejim-2-live \
     # Binary value.
     set bin {}
     for {set i 0} {$i < 256} {incr i} {
-        append bin [binary format c [rand 256]]
+        append bin [binary format c [expr {int(256 * rand())}]]
     }
     assert-equal [rejim::command $h [list set rejim $bin]] \
                  {simple OK}
@@ -689,15 +735,15 @@ test rejim-2-live \
                  {array {bulk subscribe} {bulk rejim} {integer 1}}
 
     set ::queue {}
-    local proc ::redis-readable {} h {
+    proc ::redis-readable h {
         lappend ::queue [rejim::parse $h]
     }
-    $h readable ::redis-readable
+    fileevent $h readable [list ::redis-readable $h]
 
     after 10 {
-        set h2 [socket stream $::redisServer]
+        set h2 [client-socket {*}$::redisServer]
         rejim::command $h2 {publish rejim {This is a message!}}
-        $h2 close
+        close $h2
     }
     vwait ::queue
 
@@ -706,29 +752,29 @@ test rejim-2-live \
                    {bulk {This is a message!}}}"
     unset ::queue
 
-    $h close
+    close $h
+    rename ::redis-readable {}
 }
 
 
 test rejim-3-server \
-        -constraints {jim redis-cli} \
+        -constraints {lmap redis-cli} \
         -body {
-    set port 16379
-    set h [socket stream.server 127.0.0.1:$port]
-
-    local proc ::server-readable {} h {
+    proc ::server-readable client {
         set ::server-done 1
-        set client [$h accept]
 
         assert-equal [rejim::parse $client] \
                      {array {bulk hello} {bulk world}}
-        $client puts -nonewline [rejim::serialize-tagged {
+        puts -nonewline $client [rejim::serialize-tagged {
             array {bulk answer} {integer 42}
         }]
 
-        $client close
+        close $client
     }
-    $h readable ::server-readable
+
+    set port 16379
+    set h [server-socket 127.0.0.1 $port ::server-readable]
+
 
     set temp [file tempfile]
     exec redis-cli -p $port hello world > $temp &
@@ -737,15 +783,16 @@ test rejim-3-server \
     set contents {}
     for {set i 1} {$contents eq {} && $i <= 5} {incr i} {
         set f [open $temp]
-        set contents [$f read]
-        $f close
+        set contents [read $f]
+        close $f
 
-        after $(100 * $i)
+        after [expr { 100 * $i }]
     }
     assert {[string match *answer*42* $contents]}
 
     file delete $temp
-    $h close
+    close $h
+    rename ::server-readable {}
 }
 
 
