@@ -128,31 +128,6 @@ jimsh example.tcl
 
 and then pointing your web browser at <http://localhost:8080/>.
 
-## Vagrant
-
-The development environment can be set up for you automatically if you
-have VirtualBox and [Vagrant](https://www.vagrantup.com/downloads.html)
-installed.
-
-Run the following commands in the terminal:
-
-```sh
-git clone https://github.com/dbohdan/jimhttp.git
-cd jimhttp/vagrant
-vagrant up
-```
-
-and open <http://localhost:8080/>.  Go to <http://localhost:8080/quit> to restart
-the server when you edit `example.tcl`.
-
-Stop the VM with
-
-    vagrant halt
-
-Run the server again with
-
-    vagrant up
-
 # License
 
 MIT.
