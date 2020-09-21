@@ -56,8 +56,8 @@ apply {{} {
         lappend ::testing::constraints redis-cli
     }
 }}
-if {[info commands lmap] eq {lmap}} {
-    lappend ::testing::constraints lmap
+if {![string match 8.5.* [info patchlevel]]} {
+    lappend ::testing::constraints not-8.5
 }
 
 # http.tcl tests
@@ -629,7 +629,7 @@ test storage \
 source rejim.tcl
 
 test rejim-1-protocol \
-        -constraints lmap \
+        -constraints not-8.5 \
         -body {
     assert-equal [rejim::serialize {LLEN foobar}] \
                  *2\r\n\$4\r\nLLEN\r\n\$6\r\nfoobar\r\n
@@ -709,7 +709,7 @@ test rejim-1-protocol \
 }
 
 test rejim-2-live \
-        -constraints {lmap redis} \
+        -constraints {not-8.5 redis} \
         -body {
     set h [client-socket {*}$::redisServer]
 
@@ -758,7 +758,7 @@ test rejim-2-live \
 
 
 test rejim-3-server \
-        -constraints {lmap redis-cli} \
+        -constraints {not-8.5 redis-cli} \
         -body {
     proc ::server-readable client {
         set ::server-done 1
