@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/dbohdan/jimhttp.svg)](https://travis-ci.org/dbohdan/jimhttp)
-
 A collection of standalone libraries and a web microframework prototype for
 [Jim Tcl](http://jim.tcl-lang.org/).  Most of the libraries also work in
 Tcl&nbsp;8.x.  The libraries implement command line and proc argument parsing,
