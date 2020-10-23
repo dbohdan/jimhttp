@@ -1,3 +1,5 @@
+# jimhttp
+
 A collection of standalone libraries and a web microframework prototype for
 [Jim Tcl](http://jim.tcl-lang.org/).  Most of the libraries also work in
 Tcl&nbsp;8.x.  The libraries implement command line and proc argument parsing,
@@ -5,7 +7,7 @@ an HTML DSL, parsing and generating JSON, templates, and persistent storage
 powered by SQLite3.  The web microframework provides a rough implementation of
 the HTTP/1.1 protocol and a routing DSL.
 
-# Components
+## Components
 
 The components listed below work in Tcl 8.5, Tcl 8.6, Tcl 8.7a3, and Jim Tcl
 0.76 or later unless indicated otherwise.  Each component is versioned
@@ -44,9 +46,9 @@ parsing in earlier versions.  It requires an external binary.
 
 5\. Only compatible components are tested in Tcl 8.
 
-# Use examples
+## Use examples
 
-## http.tcl
+### http.tcl
 
 ```Tcl
 source http.tcl
@@ -59,7 +61,7 @@ source http.tcl
 ::http::start-server 127.0.0.1 8080
 ```
 
-## http.tcl and storage.tcl
+### http.tcl and storage.tcl
 
 ```Tcl
 source http.tcl
@@ -78,7 +80,7 @@ source storage.tcl
 ::http::start-server 127.0.0.1 8080
 ```
 
-## json.tcl
+### json.tcl
 
 ```Tcl
 # This produces the output
@@ -98,7 +100,7 @@ puts [::json::stringify {
 }]
 ```
 
-# Requirements
+## Requirements
 
 Compile Jim Tcl 0.76 or later from its Git repository.  Stable releases prior
 to that (0.75 and earlier) will not work.  You will need an SQLite3 development
@@ -126,7 +128,7 @@ jimsh example.tcl
 
 and then pointing your web browser at <http://localhost:8080/>.
 
-# License
+## License
 
 MIT.
 
