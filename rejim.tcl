@@ -1,4 +1,4 @@
-# A basic RESP2 Redis/Valkey client library.
+# A basic RESP2 Redis/Valkey/KeyDB/etc. client library.
 # Pronounced "regime" for some reason.
 # Copyright (c) 2019, 2020, 2024 D. Bohdan
 # License: MIT
