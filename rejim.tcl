@@ -1,5 +1,6 @@
-# A basic Redis client library.  Pronounced "regime" for some reason.
-# Copyright (c) 2019, 2020 D. Bohdan
+# A basic RESP2 Redis/Valkey client library.
+# Pronounced "regime" for some reason.
+# Copyright (c) 2019, 2020, 2024 D. Bohdan
 # License: MIT
 
 namespace eval rejim {
