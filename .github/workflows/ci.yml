@@ -1,0 +1,44 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        redis-version: [5, 6, 7]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Tcl
+      run: sudo apt-get install -y tcl
+
+    - name: Start Redis server
+      uses: supercharge/redis-github-action@1.8.0
+      with:
+        redis-version: ${{ matrix.redis-version }}
+                          
+    - name: Download Jim Tcl versions
+      run: |
+        wget -O jimsh-0.76 https://github.com/dbohdan/jimsh-static/releases/download/v1/jimsh-0.76-51f65c6d38-i386
+        wget -O jimsh-0.77 https://github.com/dbohdan/jimsh-static/releases/download/v1/jimsh-0.77-a9bf5975fd-i386
+        wget -O jimsh-0.78 https://github.com/dbohdan/jimsh-static/releases/download/v1/jimsh-0.78-022f902632-i386
+        wget -O jimsh-0.79 https://github.com/dbohdan/jimsh-static/releases/download/v2/jimsh-0.79-0aa0fb4e3a-amd64
+        wget -O jimsh-0.80 https://github.com/dbohdan/jimsh-static/releases/download/v4-0.80-e4416cf86f/jimsh-0.80-e4416cf86f-amd64
+        wget -O jimsh-0.82 https://github.com/dbohdan/jimsh-static/releases/download/v5-0.82-fcbb4499a6/jimsh-0.82-fcbb4499a6-amd64
+        
+        chmod +x jimsh*
+
+    - name: 'Set `PATH`'
+      run: echo "PATH=$PATH:$PWD/jimtcl" >> $GITHUB_ENV
+
+    - name: Run tests
+      run: |
+        ./jimsh-0.76 tests.tcl
+        ./jimsh-0.77 tests.tcl
+        ./jimsh-0.78 tests.tcl
+        ./jimsh-0.79 tests.tcl
+        ./jimsh-0.80 tests.tcl
+        ./jimsh-0.82 tests.tcl
+        tclsh tests.tcl
