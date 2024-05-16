@@ -35,7 +35,7 @@ proc ::json::parse {str {numberDictArrays 1}} {
 #
 # numberDictArrays: encode dictionaries with keys {0 1 2 3 ...} as arrays,
 # e.g., {0 a 1 b} as ["a", "b"].
-# If $numberDictArrays is not true,
+# If $numberDictArrays false,
 # stringify will try to produce objects from all Tcl lists and dictionaries
 # unless explicitly told not to in the schema.
 #
@@ -46,19 +46,19 @@ proc ::json::parse {str {numberDictArrays 1}} {
 # in $data.
 # The type can be one of
 # "array", "boolean, "null", "number", "object", or "string".
-# The special dictionary key value* in any dictionary in $schema
+# The special dictionary key "*value*" in any dictionary in $schema
 # sets the default data type for every value
 # in the corresponding dictionary in $data.
 # The key "*element*" does the same for the elements of an array.
 # When $numberDictArrays is true,
-# setting "*value*" forces a dictionary to be serialized as an object
+# the key "*value*" forces a dictionary to be serialized as an object
 # when it would have been serialized as an array by default
-# (e.g., {0 foo 1 bar}).
+# (for example, the dictionary {0 foo 1 bar}).
 # When $numberDictArrays is false,
-# setting value* forces a list to be serialized
+# "*element*" forces a list to be serialized
 # as an array rather than an object.
-# In that case the list must start with
-# {value* defaultType type1 type2 ...}.
+# A list that uses "*element*"  must start with it:
+# {*element* defaultType type1 type2 ...}.
 #
 # strictSchema: generate an error if there is no schema for a value in $data.
 #
