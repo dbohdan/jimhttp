@@ -1,13 +1,13 @@
 #!/usr/bin/env jimsh
 # Tests for the web framework and its modules.
-# Copyright (c) 2014, 2015, 2016, 2018, 2019, 2020 D. Bohdan.
+# Copyright (c) 2014-2016, 2018-2020, 2024 D. Bohdan.
 # License: MIT
 
 source testing.tcl
 namespace import ::testing::*
 
 proc client-socket {server port} {
-    # This code must run in Tcl 8.5.
+    # This code must run in Tcl 8.5-9.
     if {[catch {
         set ch [socket stream $server:$port]
     }]} {
@@ -510,8 +510,8 @@ test example \
             return $result
         }
 
-        set port 8080
-        set url "http://localhost:$port"
+        set port [expr { 8000 + int(1000 * rand()) }]
+        set url http://localhost:$port
         if {![catch {test-url $url}]} {
             error "Can't test example: port $port taken!"
         }
@@ -536,7 +536,7 @@ test example \
 <li><a href="/template">/template</a></li>
 <li><a href="/quit">/quit</a></li></ul></html>}
 
-        set handle [open [list | [info nameofexecutable] example.tcl -v 99]]
+        set handle [open [list | [info nameofexecutable] example.tcl -p $port -v 99]]
         set pid [pid $handle]
         # Wait until the server is ready to respond.
         $handle readable { set ::ready 1 }
