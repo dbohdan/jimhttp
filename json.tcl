@@ -1,25 +1,26 @@
-# JSON parser / encoder.
-# Copyright (c) 2014, 2015, 2016, 2017, 2018, 2019 dbohdan.
-# License: MIT.
+# JSON parser / serializer.
+# Copyright (c) 2014-2019, 2024 D. Bohdan.
+# License: MIT
 #
-# This library is compatible at least with Tcl 8.5-8.6 and Jim Tcl v0.76
-# or later. However, to work with unescaped UTF-8 JSON strings in a UTF-8
-# build of Jim Tcl you will need a more recent version: Git commit 9eba9e87fc
-# or later. The latest release as of 2019-10-27, v0.78, will not suffice.
+# This library is compatible with Tcl 8.5-9 and Jim Tcl 0.76 and later.
+# However, to work with unescaped UTF-8 JSON strings
+# in a UTF-8 build of Jim Tcl,
+# you will need version a more recent version: 0.79 or later.
 
-### The public API: will remain backwards compatible for a major release
-### version of this module.
+### The public API: will remain backwards compatible
+### for a major release version of this module.
 
 namespace eval ::json {
-    variable version 2.1.3
+    variable version 3.0.0
 
-    variable everyKey *
-    variable everyElement N*
+    variable everyElement element*
+    variable everyValue value*
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
+#
 # numberDictArrays: decode arrays as dictionaries with sequential integers
-# starting with zero as keys; otherwise decode them as lists.
+# starting at zero as keys; otherwise, decode them as lists.
 proc ::json::parse {str {numberDictArrays 1}} {
     set tokens [::json::tokenize $str]
     set result [::json::decode $tokens $numberDictArrays]
@@ -32,29 +33,43 @@ proc ::json::parse {str {numberDictArrays 1}} {
 
 # Serialize nested Tcl dictionaries as JSON.
 #
-# numberDictArrays: encode dictionaries with keys {0 1 2 3 ...} as arrays, e.g.,
-# {0 a 1 b} to ["a", "b"]. If $numberDictArrays is not true stringify will try
-# to produce objects from all Tcl lists and dictionaries unless explicitly told
-# otherwise in the schema.
+# numberDictArrays: encode dictionaries with keys {0 1 2 3 ...} as arrays,
+# e.g., {0 a 1 b} as ["a", "b"].
+# If $numberDictArrays is not true,
+# stringify will try to produce objects from all Tcl lists and dictionaries
+# unless explicitly told not to in the schema.
 #
-# schema: data types for the values in $data. $schema consists of nested lists
-# and/or dictionaries that mirror the structure of the data in $data. Each value
-# in $schema specifies the data type of the corresponding value in $data. The
-# type can be one of "array", "boolean", "null", "number", "object" or "string".
-# The special dictionary key "*" in any dictionary in $schema sets the default
-# data type for every value in the corresponding dictionary in $data. The key
-# "N*" does the same for the elements of an array. When $numberDictArrays is
-# true setting "*" forces a dictionary to be serialized as an object when it
-# would have been serialized as an array by default (e.g., {0 foo 1 bar}). When
-# $numberDictArrays is false setting "N*" forces a list to be serialized as an
-# array rather than an object. In that case the list must start with
-# {N* defaultType type1 type2 ...}.
+# schema: data types for the values in $data.
+# $schema consists of nested lists
+# and/or dictionaries that mirror the structure of the data in $data.
+# Each value in $schema specifies the data type of the corresponding value
+# in $data.
+# The type can be one of
+# "array", "boolean, "null", "number", "object", or "string".
+# The special dictionary key value* in any dictionary in $schema
+# sets the default data type for every value
+# in the corresponding dictionary in $data.
+# The key "element*" does the same for the elements of an array.
+# When $numberDictArrays is true,
+# setting "value*" forces a dictionary to be serialized as an object
+# when it would have been serialized as an array by default
+# (e.g., {0 foo 1 bar}).
+# When $numberDictArrays is false,
+# setting value* forces a list to be serialized
+# as an array rather than an object.
+# In that case the list must start with
+# {value* defaultType type1 type2 ...}.
 #
 # strictSchema: generate an error if there is no schema for a value in $data.
 #
 # compact: no decorative whitespace.
-proc ::json::stringify {data {numberDictArrays 1} {schema ""}
-        {strictSchema 0} {compact 0}} {
+proc ::json::stringify {
+    data
+    {numberDictArrays 1}
+    {schema {}}
+    {strictSchema 0}
+    {compact 0}
+} {
     if {$schema eq "string"} {
         return \"[::json::escape-string $data]\"
     }
@@ -75,29 +90,39 @@ proc ::json::stringify {data {numberDictArrays 1} {schema ""}
                 ([llength $schema] > 0) &&
                 (![::json::subset [dict keys $schema] [dict keys $data]]))
     }]
+
     set schemaForceObject [expr {
         ($schema eq "object") ||
-        ($schemaValidDict && [dict exists $schema $::json::everyKey])
+        ($schemaValidDict && [dict exists $schema $::json::everyValue])
     }]
+
     if {([llength $data] <= 1) &&
             !$schemaForceArray && !$schemaForceObject} {
         if {
-                ($schema in {"" "number"}) &&
+                ($schema in {{} "number"}) &&
                 ([string is integer -strict $data] ||
                         [string is double -strict $data])
         } {
             return $data
         } elseif {
-                ($schema in {"" "boolean"}) &&
-                ($data in {"true" "false" 0 1})
+                ($schema in {{} "boolean"}) &&
+                ($data in {true false on off yes no 1 0})
         } {
-            return [string map {0 false 1 true} $data]
+            return [string map {
+                0 false
+                off false
+                no false
+
+                1 true
+                on true
+                yes true
+            } $data]
         } elseif {
-                ($schema in {"" "null"}) &&
+                ($schema in {{} "null"}) &&
                 ($data eq "null")
         } {
             return $data
-        } elseif {$schema eq ""} {
+        } elseif {$schema eq {}} {
             return \"[escape-string $data]\"
         } else {
             error "invalid schema \"$schema\" for value \"$data\""
@@ -143,7 +168,8 @@ proc ::json::stringify2 {data args} {
 
 ## Utility procedures.
 
-# If $option is a key in $args of the caller unset it and return its value.
+# If $option is a key in $args of the caller,
+# unset it and return its value.
 # If not, return $default.
 proc ::json::get-option {option default} {
     upvar args dictionary
@@ -156,8 +182,8 @@ proc ::json::get-option {option default} {
     return $result
 }
 
-# Return 1 if the elements in $a are a subset of those in $b and and 0
-# otherwise.
+# Return 1 if the elements in $a are a subset of those in $b
+# and 0 otherwise.
 proc ::json::subset {a b} {
     set keySet {}
     foreach x $a {
@@ -183,14 +209,14 @@ proc ::json::number-dict? {dictionary} {
     return 1
 }
 
-# Return the value for key $key from $schema if the key is present. Otherwise
-# either return the default value "" or, if $strictSchema is true, generate an
-# error.
+# Return the value for key $key from $schema if the key is present.
+# Otherwise, either return the default value {} or, if $strictSchema is true,
+# generate an error.
 proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
     if {[dict exists $schema $key]} {
         set valueSchema [dict get $schema $key]
-    } elseif {[dict exists $schema $::json::everyKey]} {
-        set valueSchema [dict get $schema $::json::everyKey]
+    } elseif {[dict exists $schema $::json::everyValue]} {
+        set valueSchema [dict get $schema $::json::everyValue]
     } elseif {[dict exists $schema $::json::everyElement]} {
         set valueSchema [dict get $schema $::json::everyElement]
     } else {
@@ -202,12 +228,12 @@ proc ::json::get-schema-by-key {schema key {strictSchema 0}} {
     }
 }
 
-proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
+proc ::json::stringify-array {array {numberDictArrays 1} {schema {}}
         {strictSchema 0} {compact 0}} {
     set arrayElements {}
     if {$numberDictArrays} {
         foreach {key value} $array {
-            if {($schema eq "") || ($schema eq "array")} {
+            if {($schema eq {}) || ($schema eq "array")} {
                 set valueSchema {}
             } else {
                 set valueSchema [::json::get-schema-by-key \
@@ -217,13 +243,13 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
                     $valueSchema $strictSchema]
         }
     } else { ;# list arrays
-        set defaultSchema ""
+        set defaultSchema {}
         if {[lindex $schema 0] eq $::json::everyElement} {
             set defaultSchema [lindex $schema 1]
             set schema [lrange $schema 2 end]
         }
         foreach value $array valueSchema $schema {
-            if {($schema eq "") || ($schema eq "array")} {
+            if {($schema eq {}) || ($schema eq "array")} {
                 set valueSchema $defaultSchema
             }
             lappend arrayElements [::json::stringify $value 0 \
@@ -239,7 +265,7 @@ proc ::json::stringify-array {array {numberDictArrays 1} {schema ""}
     return "\[[join $arrayElements $elementSeparator]\]"
 }
 
-proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
+proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema {}}
         {strictSchema 0} {compact 0}} {
     set objectDict {}
     if {$compact} {
@@ -251,7 +277,7 @@ proc ::json::stringify-object {dictionary {numberDictArrays 1} {schema ""}
     }
 
     foreach {key value} $dictionary {
-        if {($schema eq "") || ($schema eq "object")} {
+        if {($schema eq {}) || ($schema eq "object")} {
             set valueSchema {}
         } else {
             set valueSchema [::json::get-schema-by-key \
@@ -307,8 +333,9 @@ proc ::json::escape-string s {
 
 ## Procedures used by ::json::parse.
 
-# Returns a list consisting of two elements: the decoded value and a number
-# indicating how many tokens from $tokens were consumed to obtain that value.
+# Returns a list consisting of two elements:
+# the decoded value and a number indicating
+# how many tokens from $tokens were consumed to obtain that value.
 proc ::json::decode {tokens numberDictArrays {startingOffset 0}} {
     set i $startingOffset
     set nextToken [list {} {
@@ -412,7 +439,7 @@ proc ::json::decode {tokens numberDictArrays {startingOffset 0}} {
             incr j
         }
     } else {
-        if {$token eq ""} {
+        if {$token eq {}} {
             apply $errorMessage "missing token"
         } else {
             apply $errorMessage "can't parse $token"
@@ -514,8 +541,8 @@ proc ::json::analyze-number {str start} {
     }
 }
 
-# Return the error $formatString formatted with $str as its argument. $str is
-# quoted and, if long, truncated.
+# Return the error $formatString formatted with $str as its argument.
+# $str is quoted and, if long, truncated.
 proc ::json::parse-error {formatString json} {
     if {[string length $json] > 300} {
         set truncated "\"[string trimright [string range $json 0 149]] ... "
