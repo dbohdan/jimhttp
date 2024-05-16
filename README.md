@@ -132,7 +132,8 @@ and then pointing your web browser to <http://localhost:8080/>.
 
 MIT.
 
-[entities.tcl](entities.tcl) copyright 1998–2000 Ajuba Solutions and 2006 Michael Schlenker.
+[entities.tcl](entities.tcl)
+is copyright 1998–2000 Ajuba Solutions and copyright 2006 Michael Schlenker.
 It is distributed under the Tcl license.
 See the top comment in the file.
 
