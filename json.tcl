@@ -1,4 +1,4 @@
-# JSON parser / serializer.
+# JSON parser/serializer.
 # Copyright (c) 2014-2019, 2024 D. Bohdan.
 # License: MIT
 #
@@ -13,8 +13,8 @@
 namespace eval ::json {
     variable version 3.0.0
 
-    variable everyElement element*
-    variable everyValue value*
+    variable everyElement *element*
+    variable everyValue *value*
 }
 
 # Parse the string $str containing JSON into nested Tcl dictionaries.
@@ -49,9 +49,9 @@ proc ::json::parse {str {numberDictArrays 1}} {
 # The special dictionary key value* in any dictionary in $schema
 # sets the default data type for every value
 # in the corresponding dictionary in $data.
-# The key "element*" does the same for the elements of an array.
+# The key "*element*" does the same for the elements of an array.
 # When $numberDictArrays is true,
-# setting "value*" forces a dictionary to be serialized as an object
+# setting "*value*" forces a dictionary to be serialized as an object
 # when it would have been serialized as an array by default
 # (e.g., {0 foo 1 bar}).
 # When $numberDictArrays is false,

@@ -93,7 +93,7 @@ puts [::json::stringify {
     e true
 } 0 {
     a string
-    c {element* number}
+    c {*element* number}
     d string
 }]
 ```

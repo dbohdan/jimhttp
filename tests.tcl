@@ -322,10 +322,10 @@ test json \
                     {string string string string string}] \
             {["1", "key 1", "2", "x null", "3"]}
     assert-equal \
-            [::json::stringify {0 {key 1} 1 {x null}} 1 {element* string}] \
+            [::json::stringify {0 {key 1} 1 {x null}} 1 {*element* string}] \
             {["key 1", "x null"]}
     assert-equal \
-            [::json::stringify {1 {key 1} 2 {x null}} 1 {value* string}] \
+            [::json::stringify {1 {key 1} 2 {x null}} 1 {*value* string}] \
             {{"1": "key 1", "2": "x null"}}
     assert-equal \
             [::json::stringify {key {true false null}} 0 \
@@ -362,7 +362,7 @@ test json \
     assert-equal \
             [::json::stringify2 {0 {key 1} 1 {x null}} \
                     -numberDictArrays 1 \
-                    -schema {element* string} \
+                    -schema {*element* string} \
                     -compact 1] \
             {["key 1","x null"]}
     assert-equal \
@@ -374,7 +374,7 @@ test json \
     assert-equal \
             [::json::stringify2 {1 {key 1} 2 {x null}} \
                     -numberDictArrays 0 \
-                    -schema {value* string} \
+                    -schema {*value* string} \
                     -compact 1] \
             {{"1":"key 1","2":"x null"}}
     assert-equal \
@@ -386,19 +386,19 @@ test json \
     assert-equal \
             [::json::stringify2 {a 0 b 1 c 2} \
                     -numberDictArrays 1 \
-                    -schema {value* string c number} \
+                    -schema {*value* string c number} \
                     -compact 1] \
             {{"a":"0","b":"1","c":2}}
     assert-equal \
             [::json::stringify2 {a 123 b {456 789}} \
                     -numberDictArrays 0 \
-                    -schema {a string b {element* number}} \
+                    -schema {a string b {*element* number}} \
                     -strictSchema 1] \
             {{"a": "123", "b": [456, 789]}}
     assert-equal \
             [::json::stringify2 {a b c d} \
                     -numberDictArrays 0 \
-                    -schema {element* {}} \
+                    -schema {*element* {}} \
                     -strictSchema 1] \
             {["a", "b", "c", "d"]}
     assert {[catch {::json::stringify2 {a 0 b 1} \
@@ -408,7 +408,7 @@ test json \
     assert-equal \
             [::json::stringify2 {a 0 b 1} \
                     -numberDictArrays 0 \
-                    -schema {a string value* string } \
+                    -schema {a string *value* string } \
                     -strictSchema 1] \
             {{"a": "0", "b": "1"}}
     assert {[catch {::json::stringify2 {a 0 b 1} -foo bar]}]}
