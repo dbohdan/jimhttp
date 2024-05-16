@@ -1,7 +1,8 @@
-#!/usr/bin/env jimsh
-# An HTTP server and web framework for Jim Tcl.
-# Copyright (C) 2014-2016 D. Bohdan.
+#! /usr/bin/env jimsh
+# A jimhttp use example.
+# Copyright (c) 2014-2016 D. Bohdan.
 # License: MIT
+
 source arguments.tcl
 source html.tcl
 source http.tcl

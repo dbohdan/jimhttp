@@ -1,6 +1,6 @@
 # JSON parser/serializer.
 # Copyright (c) 2014-2019, 2024 D. Bohdan.
-# License: MIT
+# License: MIT.
 #
 # This library is compatible with Tcl 8.5-9 and Jim Tcl 0.76 and later.
 # However, to work with unescaped UTF-8 JSON strings

@@ -3,7 +3,7 @@
 A collection of standalone libraries and a web microframework prototype for [Jim Tcl](http://jim.tcl-lang.org/).
 Most of the libraries also work in Tcl&nbsp;8.5–9.
 The libraries implement command-line and proc argument parsing, an HTML DSL, parsing and generating JSON, templates, and persistent storage
-powered by SQLite 3. 
+powered by SQLite 3.
 The web microframework provides a rough implementation of the HTTP/1.1 protocol and a routing DSL.
 
 ## Components
@@ -131,6 +131,10 @@ and then pointing your web browser to <http://localhost:8080/>.
 ## License
 
 MIT.
+
+[entities.tcl](entities.tcl) copyright 1998–2000 Ajuba Solutions and 2006 Michael Schlenker.
+It is distributed under the Tcl license.
+See the top comment in the file.
 
 `static.jpg` photo by [Steven Lewis](http://notsteve.com/).
 License: [CC0](https://creativecommons.org/publicdomain/zero/1.0/).

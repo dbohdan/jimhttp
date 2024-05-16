@@ -1,11 +1,12 @@
-# Process command line arguments.
-# Copyright (C) 2014, 2015, 2016 dbohdan.
-# License: MIT
+# Process command-line arguments.
+# Copyright (c) 2014-2016 D. Bohdan.
+# License: MIT.
+
 namespace eval ::arguments {
     variable version 1.0.0
 }
 
-# Return a dict mapping varNames to command line argument values.
+# Return a dict mapping varNames to command-line-argument values.
 # mandatoryArguments: a list {-arg varName ...}
 # optionalArguments: a dict {-optArg varName defaultValue ...}
 proc ::arguments::parse {mandatoryArguments optionalArguments argv} {

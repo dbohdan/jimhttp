@@ -1,7 +1,7 @@
-#!/usr/bin/env jimsh
+#! /usr/bin/env jimsh
 # A test framework with constraints.
-# Copyright (C) 2014, 2015, 2016, 2019 dbohdan.
-# License: MIT
+# Copyright (c) 2014-2016, 2019 D. Bohdan.
+# License: MIT.
 
 namespace eval ::testing {
     variable version 0.5.0
@@ -99,7 +99,7 @@ proc ::testing::run-tests argv {
             lappend skipped $test {user choice}
             continue
         }
-        
+
         set unsat [::testing::unsat-constraints $test]
         if {$unsat eq {}} {
             puts "- $test"

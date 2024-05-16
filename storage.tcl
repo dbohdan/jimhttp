@@ -1,6 +1,6 @@
 # Simple persistent key-value storage.
-# Copyright (C) 2014, 2015, 2016 dbohdan.
-# License: MIT
+# Copyright (c) 2014-2016 D. Bohdan.
+# License: MIT.
 namespace eval ::storage {
     variable version 0.2.0
 }

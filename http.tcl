@@ -1,6 +1,7 @@
 # An HTTP server and web framework for Jim Tcl.
-# Copyright (C) 2014, 2015, 2016, 2019 dbohdan.
-# License: MIT
+# Copyright (c) 2014-2016, 2019 D. Bohdan.
+# License: MIT.
+
 namespace eval ::http {
     source mime.tcl
 

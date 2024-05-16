@@ -1,7 +1,7 @@
-#!/usr/bin/env jimsh
+#! /usr/bin/env jimsh
 # Update jimhttp components' versions in README.md.
-# Copyright (C) 2015, 2016 dbohdan.
-# License: MIT
+# Copyright (c) 2015-2016 D. Bohdan.
+# License: MIT.
 
 proc read-file filename {
     set channel [open $filename]
@@ -35,4 +35,5 @@ foreach line [split [read-file README.md] \n] {
         lappend updatedReadme $line
     }
 }
+
 write-file README.md [join $updatedReadme \n]
